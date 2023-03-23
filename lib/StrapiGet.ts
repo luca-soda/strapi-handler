@@ -1,9 +1,10 @@
 import { extractData } from "./StrapiHandler";
 import axios from 'axios';
+import chalk from 'chalk';
 
-interface SortDirection {
-    asc: () => StrapiGet,
-    desc: () => StrapiGet
+enum SortDirection {
+    ASC,
+    DESC
 }
 
 enum FilterOperator {
@@ -25,14 +26,21 @@ enum FilterOperator {
     IS_BETWEEN = '$between',
     STARTS_WITH = '$startsWith',
     STARTS_WITH_CASE_INSENSITIVE = '$startsWithi',
-    OR = '$or',
-    AND = '$and',
-    NOT = '$not'
+    // OR = '$or',
+    // AND = '$and',
+    // NOT = '$not'
 }
 
-enum LogicalOperation {
+enum LogicalOperator {
     AND,
-    OR
+    OR,
+    BOTH,
+    NONE
+}
+
+enum Bracket {
+    OPEN,
+    CLOSE
 }
 
 interface Filter {
@@ -40,18 +48,18 @@ interface Filter {
     value: any,
     secondaryValue: any
     operator: FilterOperator,
-    group: number,
-    logicalType: LogicalOperation
+    andGroup: number | undefined,
+    orGroup: number | undefined
 }
 
 class StrapiGet {
     private url: string;
     private sortCounter = 0;
     private fieldsCounter = 0;
-    private sorting = false;
-    private brackets = <number[]>[];
-    private filters = <Filter[]>[];
-    private currentLogicalType = LogicalOperation.AND;
+    private orGroup: number | undefined;
+    private andGroup: number | undefined;
+    private filters = <(Filter | Bracket)[]>[];
+    private acceptedLogicalOperator = LogicalOperator.BOTH;
 
     constructor(baseUrl: string, entries: string, private readonly apiKey: string) {
         this.url = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}api/${entries}?`;
@@ -67,30 +75,10 @@ class StrapiGet {
         return this;
     }
 
-    public sort(field: string): SortDirection {
+    public sort(field: string, sortDirection?: SortDirection): StrapiGet {
         this.url += `&sort[${this.sortCounter++}]=${field}`;
-        this.sorting = true;
-        return this as SortDirection;
-    }
-
-    public asc(): StrapiGet {
-        if (!this.sorting) {
-            console.error('You are setting ASC without SORT, there is probably an error in your query')
-        }
-        else {
-            this.sorting = false;
-            this.url += ':asc';
-        }
-        return this;
-    }
-
-    public desc(): StrapiGet {
-        if (!this.sorting) {
-            console.error('You are setting DESC without SORT, there is probably an error in your query')
-        }
-        else {
-            this.sorting = false;
-            this.url += ':desc';
+        if (sortDirection != null) {
+            this.url += sortDirection === SortDirection.ASC ? ':asc' : 'desc';
         }
         return this;
     }
@@ -120,46 +108,127 @@ class StrapiGet {
         return this;
     }
 
-    public filter(field: string, operator: FilterOperator, value: any, secondaryValue: any) {
-        // if (operator === FilterOperator.IS_BETWEEN && secondaryValue == null) {
-        //     console.error('You are setting a first between operator but not the second one, there is probably an error in your query');
-        // }
-        // else if (operator === FilterOperator.IS_BETWEEN) {
-        //     this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}&filters[${field}][${operator}][${this.filtersCounter++}]=${secondaryValue}&`;
-        // }
-        // else {
-        //     this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}`;
-        // }
-        // return this;
+    public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any) {
         this.filters.push({
             field,
             operator,
             value,
             secondaryValue,
-            group: this.brackets[this.brackets.length-1] ?? 0,
-            logicalType: this.currentLogicalType
+            andGroup: this.andGroup,
+            orGroup: this.orGroup,
         });
         return this;
     }
 
-    public openBracket() {
-        this.brackets.push(0);
+    public openBracket(): StrapiGet {
+        if (this.isBracketOpen())
+            throw new Error('Opening a bracket within a bracket. That\'s not supported by Strapi');
+        this.filters.push(Bracket.OPEN);
+        return this;
     }
 
-    public closeBracket() {
-        this.brackets.pop();
+    public closeBracket(): StrapiGet {
+        if (!this.isBracketOpen()) {
+            console.log(chalk.yellow('Warning: Unmatched bracket'))
+        }
+        this.filters.push(Bracket.CLOSE);
+        this.acceptedLogicalOperator = LogicalOperator.BOTH;
+        return this;
     }
 
-    public and() {
-        this.currentLogicalType = LogicalOperation.AND;
+    public isBracketOpen() {
+        let bracket = false;
+        for (let i = 0; i < this.filters.length; i++) {
+            if (Number(this.filters[i]) === Bracket.OPEN) {
+                bracket = true;
+            }
+            else if (Number(this.filters[i]) === Bracket.CLOSE) {
+                bracket = false;
+            }
+        }
+        return bracket;
     }
 
-    public or() {
-        this.currentLogicalType = LogicalOperation.OR;
+    and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiGet;
+    and(): StrapiGet;
+
+    public and(field?: string, operator?: FilterOperator, value?: any, secondaryValue?: any): StrapiGet {
+        if (field) {
+            return this.logicalOperator(field, operator!, value, LogicalOperator.AND, secondaryValue);
+        }
+        else {
+            this.andGroup ??= 0;
+            if (this.filters[this.filters.length-1] as Bracket === Bracket.CLOSE) {
+                let i = this.filters.length - 2;
+                while (this.filters[i] as Bracket !== Bracket.OPEN) {
+                    (this.filters[i] as Filter).andGroup = this.andGroup;
+                    i--;
+                }
+                return this;
+            }
+            else {
+                throw new Error('Empty "and" and "or" should be used only after a bracket');
+            }
+        }
+    }
+
+    or(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiGet;
+    or(): StrapiGet;
+
+    public or(field?: string, operator?: FilterOperator, value?: any, secondaryValue?: any): StrapiGet {
+        if (field) {
+            return this.logicalOperator(field, operator!, value, LogicalOperator.OR, secondaryValue);
+        }
+        else {
+            this.orGroup ??= 0;
+            if (this.filters[this.filters.length-1] as Bracket === Bracket.CLOSE) {
+                let i = this.filters.length - 2;
+                while (this.filters[i] as Bracket !== Bracket.OPEN) {
+                    (this.filters[i] as Filter).orGroup = this.orGroup;
+                    i--;
+                }
+                return this;
+            }
+            else {
+                throw new Error('Empty "and" and "or" should be used only after a bracket');
+            }
+        }
+    }
+
+    private logicalOperator(field: string, operator: FilterOperator, value: any, logicalOperator: LogicalOperator, secondaryValue?: any) {
+        if (logicalOperator !== LogicalOperator.AND && logicalOperator !== LogicalOperator.OR) {
+            throw new Error('Pass only AND or OR to LogicalOperator Function');
+        }
+        this.filter(field, operator, value, secondaryValue);
+        const logicalString = logicalOperator === LogicalOperator.AND ? 'and' : 'or';
+        if (this.acceptedLogicalOperator !== logicalOperator && this.acceptedLogicalOperator !== LogicalOperator.BOTH) {
+            throw new Error('Ambiguous logical operator: use brackets');
+        }
+        if (this.filters.length) {
+            if (this.filters[this.filters.length-1] as Bracket === Bracket.OPEN) {
+                throw new Error(`Cannot "${logicalString}" after a open bracket, use filter instead`);
+            }
+            else {
+                if ((this.filters[this.filters.length-2] as Filter)[`${logicalString}Group`] === undefined) {
+                    this[`${logicalString}Group`] = 0;
+                    (this.filters[this.filters.length-2] as Filter)[`${logicalString}Group`] = 0;
+                }
+                this[`${logicalString}Group`] = this[`${logicalString}Group`]!+1;
+                (this.filters[this.filters.length-1] as Filter)[`${logicalString}Group`] = this[`${logicalString}Group`];
+                this.acceptedLogicalOperator = logicalOperator;
+                return this;
+            }
+        }
+        else {
+            throw new Error(`Using "${logicalString}" without filters to operate with`);
+        }
     }
 
     public async call<T>(): Promise<{ data: T[], meta: any }> {
-        console.log(this.url);
+        if (this.isBracketOpen()) {
+            throw new Error('Bracket opened and never closed');
+        }
+        console.log(this.filters.filter((e) => Number(e) !== e));
         let { data: { data, meta } } = await axios.get(this.url, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`
@@ -171,6 +240,10 @@ class StrapiGet {
             meta
         };
     }
+
+    // private filtersToQuery() {
+        
+    // }
 }
 
 
