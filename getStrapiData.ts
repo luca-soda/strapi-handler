@@ -12,16 +12,10 @@ const strapiHandler = new StrapiHandler('http://127.0.0.1:1337', apiKey);
 const getStrapiData = () => {
     return strapiHandler
                     .get('nfts')
-                    .openBracket()
-                        .filter('Between_Check', FilterOperator.IS_BETWEEN, 0, 10)
-                        .or('Metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'm')
-                        .or('Metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'm')
-                    .closeBracket()
-                        .and()
-                    .openBracket()
-                        .filter('Metadata', FilterOperator.CONTAINS, 'm')
-                        .or('Metadata', FilterOperator.CONTAINS, 'm')
-                    .closeBracket()
+                    .filter('Between_Check', FilterOperator.IS_BETWEEN, 0, 1)
+                    .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'a')
+                    .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'm')
+                    .or('metadata', FilterOperator.CONTAINS, 'm')
                     .call<Nft>()
 }
 
