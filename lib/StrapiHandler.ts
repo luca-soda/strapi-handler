@@ -1,7 +1,7 @@
 import StrapiGet from "./StrapiGet";
 
 class StrapiHandler {
-    constructor(private readonly strapiUrl: string, private readonly apiKey: string) { }
+    constructor(protected readonly strapiUrl: string, protected readonly apiKey: string) { }
 
     public get(entries: string) {
         return new StrapiGet(this.strapiUrl, entries, this.apiKey);

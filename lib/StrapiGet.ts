@@ -54,9 +54,10 @@ class StrapiGet {
     private isBracketOpen = false;
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
+    private isIdHidden = false;
 
-    constructor(baseUrl: string, entries: string, private readonly apiKey: string) {
-        this.url = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}api/${entries}?`;
+    constructor(strapiUrl: string, entries: string, private readonly apiKey: string) {
+        this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}?`;
     }
 
     public page(page: number): StrapiGet {
@@ -112,6 +113,11 @@ class StrapiGet {
             orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
         });
         return this;
+    }
+
+    public hideId() {
+        this.isIdHidden = true;
+        return this
     }
 
     public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiGet {
@@ -176,13 +182,18 @@ class StrapiGet {
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}`
             }
         }, '');
-        console.log(this.url);
         let { data: { data, meta } } = await axios.get(this.url, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         });
-        const result = extractData(data);
+        const result = extractData(data).map((el: any) => {
+            const obj = {...el};
+            if (this.isIdHidden) {
+                delete obj.id;
+            }
+            return obj;
+        })
         return {
             data: result,
             meta

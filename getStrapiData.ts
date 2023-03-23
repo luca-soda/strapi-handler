@@ -14,8 +14,10 @@ const getStrapiData = () => {
                     .get('nfts')
                     .filter('Between_Check', FilterOperator.IS_BETWEEN, 0, 1)
                     .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'a')
-                    .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'm')
+                    .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'd')
                     .or('metadata', FilterOperator.CONTAINS, 'm')
+                    .field('metadata')
+                    .hideId()
                     .call<Nft>()
 }
 
