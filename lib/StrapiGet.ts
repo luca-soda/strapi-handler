@@ -1,7 +1,7 @@
 import { extractData } from "./StrapiHandler";
 import axios from 'axios';
 
-interface GetSortDirection {
+interface SortDirection {
     asc: () => StrapiGet,
     desc: () => StrapiGet
 }
@@ -30,12 +30,28 @@ enum FilterOperator {
     NOT = '$not'
 }
 
+enum LogicalOperation {
+    AND,
+    OR
+}
+
+interface Filter {
+    field: string,
+    value: any,
+    secondaryValue: any
+    operator: FilterOperator,
+    group: number,
+    logicalType: LogicalOperation
+}
+
 class StrapiGet {
     private url: string;
     private sortCounter = 0;
     private fieldsCounter = 0;
-    private filtersCounter = 0;
     private sorting = false;
+    private brackets = <number[]>[];
+    private filters = <Filter[]>[];
+    private currentLogicalType = LogicalOperation.AND;
 
     constructor(baseUrl: string, entries: string, private readonly apiKey: string) {
         this.url = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}api/${entries}?`;
@@ -51,10 +67,10 @@ class StrapiGet {
         return this;
     }
 
-    public sort(field: string): GetSortDirection {
+    public sort(field: string): SortDirection {
         this.url += `&sort[${this.sortCounter++}]=${field}`;
         this.sorting = true;
-        return this as GetSortDirection;
+        return this as SortDirection;
     }
 
     public asc(): StrapiGet {
@@ -104,9 +120,42 @@ class StrapiGet {
         return this;
     }
 
-    public filter(field: string, operator: FilterOperator, value: string) {
-        this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}`
+    public filter(field: string, operator: FilterOperator, value: any, secondaryValue: any) {
+        // if (operator === FilterOperator.IS_BETWEEN && secondaryValue == null) {
+        //     console.error('You are setting a first between operator but not the second one, there is probably an error in your query');
+        // }
+        // else if (operator === FilterOperator.IS_BETWEEN) {
+        //     this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}&filters[${field}][${operator}][${this.filtersCounter++}]=${secondaryValue}&`;
+        // }
+        // else {
+        //     this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}`;
+        // }
+        // return this;
+        this.filters.push({
+            field,
+            operator,
+            value,
+            secondaryValue,
+            group: this.brackets[this.brackets.length-1] ?? 0,
+            logicalType: this.currentLogicalType
+        });
         return this;
+    }
+
+    public openBracket() {
+        this.brackets.push(0);
+    }
+
+    public closeBracket() {
+        this.brackets.pop();
+    }
+
+    public and() {
+        this.currentLogicalType = LogicalOperation.AND;
+    }
+
+    public or() {
+        this.currentLogicalType = LogicalOperation.OR;
     }
 
     public async call<T>(): Promise<{ data: T[], meta: any }> {

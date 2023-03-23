@@ -12,7 +12,7 @@ const strapiHandler = new StrapiHandler('http://127.0.0.1:1337', apiKey);
 const getStrapiData = () => {
     return strapiHandler
                     .get('nfts')
-                    .filter('metadata', FilterOperator.NOT_EQUAL_TO, 'B')
+                    .filter('Between_Check', FilterOperator.IS_BETWEEN, 0, 10)
                     .call<Nft>()
 }
 
