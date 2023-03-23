@@ -1,14 +1,5 @@
-import axios from "axios";
-
-class StrapiHandler {
-    constructor(private readonly strapiUrl: string, private readonly apiKey: string) { }
-
-    public get(entries: string) {
-        return new StrapiGet(this.strapiUrl, entries, this.apiKey);
-    }
-
-
-}
+import { extractData } from "./StrapiHandler";
+import axios from 'axios';
 
 interface GetSortDirection {
     asc: () => StrapiGet,
@@ -103,36 +94,6 @@ class StrapiGet {
     }
 }
 
-const isStrapiResponse = (data: any) => {
-    return (data[0]?.id && data[0]?.attributes) || (data.id && data.attributes);
-}
 
-const extractData = (data: any) => {
-    if (isStrapiResponse(data)) {
-        if (data.length == null) {
-            data = [data];
-        }
-        let result = data.map((d: any) => ({
-            id: d.id,
-            ...d.attributes
-        }));
-        for (let i = 0; i < result.length; i++) {
-            const r = result[i];
-            const keys = Object.keys(r);
-            for (let key of keys) {
-                if (r[key].data) {
-                    r[key] = extractData(r[key].data);
-                }
-                if (r[key].data === null) {
-                    r[key] = []
-                }
-            }
-        }
-        return result;
-    }
-    else {
-        return data;
-    }
-}
 
-export default StrapiHandler;
+export default StrapiGet;

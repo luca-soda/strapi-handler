@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import StrapiHandler from "./StrapiHandler";
+import StrapiHandler from "./lib/StrapiHandler";
 import * as utl from 'node:util';
 
 interface Nft {
