@@ -16,9 +16,8 @@ const getStrapiData = () => {
                     .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'a')
                     .or('metadata', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'd')
                     .or('metadata', FilterOperator.CONTAINS, 'm')
-                    .field('metadata')
-                    .hideId()
-                    .rename('metadata', 'dati')
+                    .showOnlyId()
+                    .offsetLimit(1)
                     .call<Nft>()
 }
 

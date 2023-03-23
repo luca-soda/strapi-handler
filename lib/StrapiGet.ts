@@ -55,6 +55,7 @@ class StrapiGet {
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
     private isIdHidden = false;
+    private isAllHidden = false;
     private renamer = <{field: string, target: string}[]>[]
 
     constructor(strapiUrl: string, entries: string, private readonly apiKey: string) {
@@ -119,6 +120,11 @@ class StrapiGet {
     public hideId() {
         this.isIdHidden = true;
         return this
+    }
+
+    public showOnlyId() {
+        this.isAllHidden = true;
+        return this;
     }
 
     public rename(field: string, target: string) {
@@ -197,6 +203,13 @@ class StrapiGet {
             const obj = {...el};
             if (this.isIdHidden) {
                 delete obj.id;
+            }
+            if (this.isAllHidden) {
+                Object.keys(el).forEach((key) => {
+                    if (key !== 'id') {
+                        delete obj[key];
+                    }
+                })
             }
             this.renamer.forEach((rename) => {
                 obj[rename.target] = obj[rename.field];
