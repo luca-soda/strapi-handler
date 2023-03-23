@@ -1,10 +1,27 @@
+import axios from "axios";
 import StrapiGet from "./StrapiGet";
 
 class StrapiHandler {
     constructor(protected readonly strapiUrl: string, protected readonly apiKey: string) { }
 
-    public get(entries: string) {
+    public findAll(entries: string) {
         return new StrapiGet(this.strapiUrl, entries, this.apiKey);
+    }
+
+    public async create(collectionName: string, obj: any) {
+        const url = `${this.strapiUrl.endsWith('/') ? this.strapiUrl : this.strapiUrl + '/'}api/${collectionName}`;
+        obj = {
+            data: obj
+        };
+        let { data: { data, meta } } = await axios.post(url, obj, {
+            headers: {
+                'Authorization': `Bearer ${this.apiKey}`
+            }
+        });
+        return {
+            data: extractData(data),
+            meta   
+        }
     }
 }
 

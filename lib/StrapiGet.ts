@@ -212,6 +212,5 @@ class StrapiGet {
 }
 
 
-
 export default StrapiGet;
 export {FilterOperator}

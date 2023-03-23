@@ -1,9 +1,10 @@
 import { AxiosError } from "axios";
 import * as utl from 'node:util';
-import getStrapiData from "./getStrapiData";
+import {getStrapiData, postStrapiData} from "./getStrapiData";
 
 (async() => {
     try {
+        await postStrapiData();
         const nfts = await getStrapiData();
         console.log(utl.inspect(nfts, {colors:true, depth: 10}));
     }
