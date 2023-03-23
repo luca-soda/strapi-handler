@@ -6,10 +6,35 @@ interface GetSortDirection {
     desc: () => StrapiGet
 }
 
+enum FilterOperator {
+    EQUAL_TO = '$eq',
+    EQUAL_TO_CASE_INSENSITIVE  = '$eqi',
+    NOT_EQUAL_TO = '$ne',
+    LESS_THAN = '$lt',
+    LESS_THAN_OR_EQUAL_TO = '$lte',
+    GREATER_THAN = '$gt',
+    GREATER_THAN_OR_EQUAL_TO = '$gte',
+    IN = '$in',
+    NOT_IN = '$notIn',
+    CONTAINS = '$contains',
+    NOT_CONTAINS = '$notContains',
+    CONTAINS_CASE_INSENSITIVE = '$containsi',
+    NOT_CONTAINS_CASE_INSENSITIVE = '$notContainsi',
+    IS_NULL = '$null',
+    IS_NOT_NULL = '$notNull',
+    IS_BETWEEN = '$between',
+    STARTS_WITH = '$startsWith',
+    STARTS_WITH_CASE_INSENSITIVE = '$startsWithi',
+    OR = '$or',
+    AND = '$and',
+    NOT = '$not'
+}
+
 class StrapiGet {
     private url: string;
     private sortCounter = 0;
     private fieldsCounter = 0;
+    private filtersCounter = 0;
     private sorting = false;
 
     constructor(baseUrl: string, entries: string, private readonly apiKey: string) {
@@ -79,6 +104,11 @@ class StrapiGet {
         return this;
     }
 
+    public filter(field: string, operator: FilterOperator, value: string) {
+        this.url += `&filters[${field}][${operator}][${this.filtersCounter++}]=${value}`
+        return this;
+    }
+
     public async call<T>(): Promise<{ data: T[], meta: any }> {
         console.log(this.url);
         let { data: { data, meta } } = await axios.get(this.url, {
@@ -97,3 +127,4 @@ class StrapiGet {
 
 
 export default StrapiGet;
+export {FilterOperator}
