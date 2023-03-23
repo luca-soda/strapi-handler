@@ -55,6 +55,7 @@ class StrapiGet {
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
     private isIdHidden = false;
+    private renamer = <{field: string, target: string}[]>[]
 
     constructor(strapiUrl: string, entries: string, private readonly apiKey: string) {
         this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}?`;
@@ -118,6 +119,11 @@ class StrapiGet {
     public hideId() {
         this.isIdHidden = true;
         return this
+    }
+
+    public rename(field: string, target: string) {
+        this.renamer.push({field, target});
+        return this;
     }
 
     public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiGet {
@@ -192,6 +198,10 @@ class StrapiGet {
             if (this.isIdHidden) {
                 delete obj.id;
             }
+            this.renamer.forEach((rename) => {
+                obj[rename.target] = obj[rename.field];
+                delete obj[rename.field];
+            })
             return obj;
         })
         return {

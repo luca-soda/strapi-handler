@@ -18,6 +18,7 @@ const getStrapiData = () => {
                     .or('metadata', FilterOperator.CONTAINS, 'm')
                     .field('metadata')
                     .hideId()
+                    .rename('metadata', 'dati')
                     .call<Nft>()
 }
 
