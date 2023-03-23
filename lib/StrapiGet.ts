@@ -25,9 +25,6 @@ enum FilterOperator {
     IS_BETWEEN = '$between',
     STARTS_WITH = '$startsWith',
     STARTS_WITH_CASE_INSENSITIVE = '$startsWithi',
-    // OR = '$or',
-    // AND = '$and',
-    // NOT = '$not'
 }
 
 enum LogicalOperator {
@@ -56,7 +53,8 @@ class StrapiGet {
     private group = 0;
     private isIdHidden = false;
     private isAllHidden = false;
-    private renamer = <{field: string, target: string}[]>[]
+    private renamer = <{field: string, target: string}[]>[];
+    private shouldMatchOnlyOne = false;
 
     constructor(strapiUrl: string, entries: string, private readonly apiKey: string) {
         this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}?`;
@@ -102,6 +100,11 @@ class StrapiGet {
 
     public withCount(shouldCount: boolean): StrapiGet {
         this.url += `&pagination[withCount]=${shouldCount}`;
+        return this;
+    }
+
+    public matchOnlyOne() {
+        this.shouldMatchOnlyOne = true;
         return this;
     }
 
@@ -217,10 +220,15 @@ class StrapiGet {
             })
             return obj;
         })
-        return {
-            data: result,
-            meta
-        };
+        if (!this.shouldMatchOnlyOne) {
+            return {
+                data: result,
+                meta
+            }
+        }
+        else {
+            return result[0];
+        }
     }
 }
 
