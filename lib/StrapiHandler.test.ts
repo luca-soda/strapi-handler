@@ -1,6 +1,6 @@
 import StrapiHandler = require('./StrapiHandler');
 import uuidLib = require('uuid');
-import { FilterOperator } from './Interfaces';
+import { FilterOperator, SortDirection } from './Interfaces';
 
 const uuidv4 = uuidLib.v4;
 
@@ -31,6 +31,7 @@ let id: number | null, obj: any, uuid: string | null, n: number | null;
 interface Test {
     id: number,
     Str: string,
+    Str2: string,
     Num: number,
     RelationOne: any,
     RelationMany: any[] | null
@@ -97,7 +98,16 @@ const createRandom = async (total: number) => {
     for (let i = 0; i < total; i++) {
         await strapiHandler.create(collectionName, <Test>{
             Str: uuidv4(),
+            Str2: uuidv4(),
             Num: Math.floor(Math.random()*100),
+        });
+    }
+}
+
+const createRandomRelationOne = async (total: number) => {
+    for (let i = 0; i < total; i++) {
+        await strapiHandler.create(relationOne, {
+            Str: uuidv4()
         });
     }
 }
@@ -339,4 +349,114 @@ it('should return populated page (relationOne)', async () => {
     expect(result1![0].id).toBe(result2Id);
     expect(results3.data[0]?.RelationOne.length).toBe(1);
     expect(result2Id).toBe(results3.data[0]?.RelationOne[0].id);
+});
+
+it('should sort desc', async () => {
+    await clearStrapi();
+    await strapiHandler.create(collectionName, {
+        Num: 0,
+    });
+    await strapiHandler.create(collectionName, {
+        Num: 1,
+    });
+    await strapiHandler.create(collectionName, {
+        Num: 5,
+    })
+    await strapiHandler.create(collectionName, {
+        Num: 2,
+    });
+
+    const results = await strapiHandler.findAll(collectionName).sort('Num', SortDirection.DESC).call<Test>();
+    const sortedData = [...results.data];
+    expect(JSON.stringify(results.data)).toBe(JSON.stringify(sortedData));
+});
+
+it('should select only Str and RelationOne', async () => {
+    await clearStrapi();
+    await createRandomRelationOne(1);
+    const id = await strapiHandler.findOne(relationOne).getId();
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 1,
+        Str: uuidv4(),
+        RelationOne: id
+    });
+
+    const results = await strapiHandler.findAll(collectionName).fields(['Str', 'Str2']).call<Test>();
+    expect(results.data.length).toBe(1);
+    expect(results.data[0]?.Num).toBeUndefined();
+    expect(results.data[0]?.Str2).toBeDefined();
+    expect(results.data[0]?.Str).toBeDefined();
+})
+
+it('should return 50 elements', async () => {
+    await clearStrapi();
+    await createRandom(51);
+
+    const results = await strapiHandler.findAll(collectionName).pageSize(50).call<Test>();
+    expect(results.data.length).toBe(50);
+});
+
+it('should return specific element with 1 and 2 Num', async () => {
+    await clearStrapi();
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 0
+    });
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 1
+    });
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 2
+    });
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 3
+    });
+
+    const results = await strapiHandler.findAll(collectionName).sort('Num', SortDirection.ASC).offsetStart(1).offsetLimit(2).call<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]?.Num).toBe(1);
+    expect(results.data[1]?.Num).toBe(2);
+});
+
+it('should hide id', async () => {
+    await clearStrapi();
+    createRandom(1);
+
+    const results = await strapiHandler.findAll(collectionName).hideId().call<Test>();
+    expect(results.data.length).toBe(1);
+    expect(results.data[0]?.id).toBeUndefined();
+});
+
+it('should hide id', async () => {
+    await clearStrapi();
+    createRandom(1);
+
+    const results = await strapiHandler.findAll(collectionName).showOnlyId().call<Test>();
+    expect(results.data.length).toBe(1);
+    expect(results.data[0]?.id).toBeDefined();
+    expect(Object.keys(results.data[0]!).length).toBe(1);
+});
+
+it('should rename Str in uuid', async () => {
+    await clearStrapi();
+    const uuid = uuidv4();
+    const uuid2 = uuidv4();
+    await strapiHandler.create(collectionName, {
+        Str: uuid
+    });
+    await strapiHandler.create(collectionName, {
+        Str: uuid2
+    });
+
+    const results = await strapiHandler.findAll(collectionName).rename('Str','uuid').call<{uuid: string}>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]?.uuid).toBe(uuid);
+    expect(results.data[1]?.uuid).toBe(uuid2);
+});
+
+it('should throw (complex combination not supported yet)', async () => {
+    await clearStrapi();
+    let unsupportedOperation = () => strapiHandler.findAll(collectionName).and('Str',FilterOperator.EQUAL_TO, 'Never').or('Str',FilterOperator.EQUAL_TO, 'Never');
+    expect(unsupportedOperation).toThrow();
+    unsupportedOperation = () => strapiHandler.findAll(collectionName).or('Str',FilterOperator.EQUAL_TO, 'Never').and('Str',FilterOperator.EQUAL_TO, 'Never');
+    expect(unsupportedOperation).toThrow();
 });

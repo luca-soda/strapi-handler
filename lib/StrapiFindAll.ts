@@ -8,7 +8,6 @@ class StrapiFindAll {
     private sortCounter = 0;
     private fieldsCounter = 0;
     private filters = <(Filter)[]>[];
-    private isBracketOpen = false;
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
     private isIdHidden = false;
@@ -42,6 +41,11 @@ class StrapiFindAll {
         return this;
     }
 
+    public fields(fields: string[]): StrapiFindAll {
+        fields.forEach(field => this.field(field));
+        return this;
+    }
+
     public pageSize(pageSize: number): StrapiFindAll {
         this.url += `&pagination[pageSize]=${pageSize}`
         return this;
@@ -54,11 +58,6 @@ class StrapiFindAll {
 
     public offsetLimit(limit: number): StrapiFindAll {
         this.url += `&pagination[limit]=${limit}`;
-        return this;
-    }
-
-    public withCount(shouldCount: boolean): StrapiFindAll {
-        this.url += `&pagination[withCount]=${shouldCount}`;
         return this;
     }
 
@@ -108,9 +107,6 @@ class StrapiFindAll {
     }
 
     public async call<T>(): Promise<{ data: T[], meta: any }> {
-        if (this.isBracketOpen) {
-            throw new Error('Bracket opened and never closed');
-        }
         let isSetAnd = false;
         this.filters.forEach((el) => {
             if (el.andGroup !== 0)
