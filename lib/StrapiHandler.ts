@@ -1,11 +1,16 @@
 import axios from "axios";
-import StrapiGet from "./StrapiGet";
+import StrapiFindAll from "./StrapiFindAll";
+import StrapiFindOne from "./StrapiFindOne";
 
 class StrapiHandler {
     constructor(protected readonly strapiUrl: string, protected readonly apiKey: string) { }
 
     public findAll(entries: string) {
-        return new StrapiGet(this.strapiUrl, entries, this.apiKey);
+        return new StrapiFindAll(this.strapiUrl, entries, this.apiKey);
+    }
+
+    public findOne(entries: string) {
+        return new StrapiFindOne(this.strapiUrl, entries, this.apiKey)
     }
 
     public async create(collectionName: string, obj: any) {
@@ -13,15 +18,12 @@ class StrapiHandler {
         obj = {
             data: obj
         };
-        let { data: { data, meta } } = await axios.post(url, obj, {
+        let { data: { data } } = await axios.post(url, obj, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         });
-        return {
-            data: extractData(data),
-            meta   
-        }
+        return extractData(data);
     }
 }
 
@@ -42,10 +44,10 @@ const extractData = (data: any) => {
             const r = result[i];
             const keys = Object.keys(r);
             for (let key of keys) {
-                if (r[key].data) {
+                if (r[key]?.data) {
                     r[key] = extractData(r[key].data);
                 }
-                if (r[key].data === null) {
+                if (r[key]?.data === null) {
                     r[key] = []
                 }
             }
