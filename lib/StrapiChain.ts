@@ -5,7 +5,7 @@ class StrapiChain {
     private url: string = '';
     private data: any = '';
 
-    constructor(strapiUrl: string, entries: string, private readonly apiKey: string, private readonly call: Promise<{data: any}>) {
+    constructor(strapiUrl: string, entries: string, private readonly apiKey: string, private readonly call: Promise<{data: any}>, private readonly forceField?: string) {
         call.then((obj: any) => {
             this.data = obj;
             this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}/${obj?.id}`;
@@ -46,6 +46,9 @@ class StrapiChain {
         await this.call;
         if (this.data?.id == null) {
             return null;
+        }
+        if (this.forceField) {
+            keys = this.forceField;
         }
         if (keys != null) {
             if (typeof keys === 'string') {

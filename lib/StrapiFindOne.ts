@@ -29,7 +29,7 @@ class StrapiFindOne {
 
     public chain(): StrapiChain {
         const call = this.call();
-        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call);
+        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.isAllHidden ? 'id' : undefined);
     }
 
     public hideId() {
@@ -49,6 +49,11 @@ class StrapiFindOne {
         return this;
     }
 
+    public populate(field: string): StrapiFindOne {
+        this.url += `&populate=${field}`;
+        return this;
+    }
+
     public rename(field: string, target: string) {
         this.renamer.push({field, target});
         return this;
@@ -59,9 +64,9 @@ class StrapiFindOne {
         return this;
     }
 
-    public showOnlyId() {
+    public getId(): Promise<number | null> {
         this.isAllHidden = true;
-        return this;
+        return this.chain().show<number>();
     }
 
     public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {

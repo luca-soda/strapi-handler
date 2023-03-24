@@ -7,6 +7,8 @@ const uuidv4 = uuidLib.v4;
 const strapiUrl = 'http://127.0.0.1:1337'
 const apiKey = '37a9dca00ffbd809de068adf97ae7b4bcc0b78a3102798fd393d7126da8984fbf563e6ebf6e507e3fc93970b9971ecee6175096e85523169d6feea6f89d2d15ccafcf6ad4e7adcab5c99c6146e959a4106e92c619933a050d558f692afaf2a703ad55c151ebf90485fab1e7a61f035b722177cec37f9037ee3292d8e2c1a160b';
 const collectionName = 'Tests';
+const relationOne = 'Relation-ones';
+// const relationMany = 'Relation-manies';
 
 it('should create a valid StrapiHandlers', async () => {
     let handler: any = new StrapiHandler.default(strapiUrl, apiKey);
@@ -62,15 +64,43 @@ it('should delete the Test', async () => {
 it('should delete all tests', async () => {
     let results = await strapiHandler.findAll(collectionName).call<Test>();
     expect(results.data).toBeDefined();
-    for (let i = 0; i < results.data.length; i++) {
-        const target = results.data[i]!;
-        const result = await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, target.id).chain().delete();
-        expect(JSON.stringify(target)).toBe(JSON.stringify(result));
-    }
+    let elements;
+    do {
+        for (let i = 0; i < results.data.length; i++) {
+            const target = results.data[i]!;
+            const result = await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, target.id).chain().delete();
+            expect(JSON.stringify(target)).toBe(JSON.stringify(result));
+        }
+        results = await strapiHandler.findAll(collectionName).call<Test>();
+        elements = results.data.length;
+    } while (elements > 0);
     results = await strapiHandler.findAll(collectionName).call<Test>();
     expect(results.data.length).toBe(0);
 });
 
+
+const clearStrapi = async () => {
+    let results = await strapiHandler.findAll(collectionName).call<Test>();
+    let elements;
+    do {
+        for (let i = 0; i < results.data.length; i++) {
+            const target = results.data[i]!;
+            await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, target.id).chain().delete();
+        }
+        results = await strapiHandler.findAll(collectionName).call<Test>();
+        elements = results.data.length;
+    } while (elements > 0);
+    results = await strapiHandler.findAll(collectionName).call<Test>();
+}
+
+const createRandom = async (total: number) => {
+    for (let i = 0; i < total; i++) {
+        await strapiHandler.create(collectionName, <Test>{
+            Str: uuidv4(),
+            Num: Math.floor(Math.random()*100),
+        });
+    }
+}
 
 it('should create a new Test', async () => {
     uuid = uuidv4();
@@ -162,7 +192,6 @@ it('should return both the uuid and the n', async () => {
     const n = result!.Num;
     const results = await strapiHandler.findOne(collectionName).chain().show<Partial<Test> | null>(['Str','Num']);
     expect(results).not.toBeNull();
-    console.log(results);
     expect(results!['Str']).toBe(uuid)
     expect(results!['Num']).toBe(n)
 });
@@ -206,10 +235,24 @@ it('should return the same element', async () => {
 });
 
 it('should return an element', async () => {
+    await clearStrapi();
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 0,
+        Str: uuidv4()
+    });
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 1,
+        Str: uuidv4()
+    });
+    await strapiHandler.create(collectionName, <Test>{
+        Num: 2,
+        Str: uuidv4()
+    });
     let result = await strapiHandler.findOne(collectionName).chain().show<Test>();
     expect(result).toBeDefined();
     const uuid = uuidv4();
     const id = result!.id;
+    const n = result!.Num;
     result = await strapiHandler.findOne(collectionName).or('Str', FilterOperator.EQUAL_TO, uuid).or('Num', FilterOperator.EQUAL_TO, n).chain().show<Test>();
     expect(result?.id).toBe(id);
 });
@@ -222,10 +265,7 @@ it('should throw (not yet supported) (chaining "and" and "or")', async () => {
 });
 
 it('should return two elements', async () => {
-    const all = await strapiHandler.findAll(collectionName).call<Test>();
-    for (let i = 0; i < all.data.length; i++) {
-        await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, all.data[i]!.id).chain().delete();
-    }
+    await clearStrapi();
     await strapiHandler.create(collectionName, {
         Str: uuidv4(),
         Num: 0
@@ -245,10 +285,7 @@ it('should return two elements', async () => {
 });
 
 it('should return one elements', async () => {
-    const all = await strapiHandler.findAll(collectionName).call<Test>();
-    for (let i = 0; i < all.data.length; i++) {
-        await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, all.data[i]!.id).chain().delete();
-    }
+    await clearStrapi();
     await strapiHandler.create(collectionName, <Test>{
         Str: uuidv4(),
         Num: 0,
@@ -273,6 +310,33 @@ it('should hide id', async () => {
 });
 
 it('should hide all (but id)', async () => {
-    const result = await strapiHandler.findOne(collectionName).showOnlyId().chain().show<number>();
+    const result = await strapiHandler.findOne(collectionName).getId();
     expect(Number(result)).not.toBeNaN();
+});
+
+it('should return page two of one element', async () => {
+    await clearStrapi();
+    await createRandom(26);
+    const results = await strapiHandler.findAll(collectionName).page(2).call<Test>();
+    expect(results).toBeDefined();
+    expect(results.data.length).toBe(1);
+});
+
+it('should return populated page (relationOne)', async () => {
+    await clearStrapi();
+    const uuid = uuidv4();
+    await strapiHandler.create(relationOne, {
+        Str: uuid
+    });
+    const id = await strapiHandler.findOne(relationOne).filter('Str', FilterOperator.EQUAL_TO, uuid).getId();
+    await strapiHandler.create(collectionName, <Test>{
+        Str: uuidv4(),
+        RelationOne: id
+    });
+    let result1 = await strapiHandler.findOne(collectionName).populate('RelationOne').chain().show<any[]>('RelationOne');
+    let result2Id = await strapiHandler.findOne(relationOne).filter('Str', FilterOperator.EQUAL_TO, uuid).getId();
+    let results3 = await strapiHandler.findAll(collectionName).populate('RelationOne').call<Test>();
+    expect(result1![0].id).toBe(result2Id);
+    expect(results3.data[0]?.RelationOne.length).toBe(1);
+    expect(result2Id).toBe(results3.data[0]?.RelationOne[0].id);
 });
