@@ -4,10 +4,26 @@ import { FilterOperator } from './Interfaces';
 
 const uuidv4 = uuidLib.v4;
 
+const strapiUrl = 'http://127.0.0.1:1337'
 const apiKey = '37a9dca00ffbd809de068adf97ae7b4bcc0b78a3102798fd393d7126da8984fbf563e6ebf6e507e3fc93970b9971ecee6175096e85523169d6feea6f89d2d15ccafcf6ad4e7adcab5c99c6146e959a4106e92c619933a050d558f692afaf2a703ad55c151ebf90485fab1e7a61f035b722177cec37f9037ee3292d8e2c1a160b';
-const strapiHandler = new StrapiHandler.default('http://127.0.0.1:1337', apiKey);
-
 const collectionName = 'Tests';
+
+it('should create a valid StrapiHandlers', async () => {
+    let handler: any = new StrapiHandler.default(strapiUrl, apiKey);
+    expect(handler).toBeDefined();
+    handler = new StrapiHandler.default(strapiUrl+'/', apiKey)
+    expect(handler).toBeDefined();
+    handler = new StrapiHandler.default(strapiUrl, apiKey).findAll(collectionName);
+    expect(handler).toBeDefined();
+    handler = new StrapiHandler.default(strapiUrl+'/', apiKey).findAll(collectionName);
+    expect(handler).toBeDefined();
+    handler = new StrapiHandler.default(strapiUrl, apiKey).findOne(collectionName).chain();
+    expect(handler).toBeDefined();
+    handler = new StrapiHandler.default(strapiUrl+'/', apiKey).findOne(collectionName).chain();
+    expect(handler).toBeDefined();
+});
+
+let strapiHandler = new StrapiHandler.default(strapiUrl, apiKey);
 let id: number | null, obj: any, uuid: string | null, n: number | null;
 
 interface Test {
@@ -105,4 +121,93 @@ it('should return both the previous Tests', async () => {
     expect(results.data.length).toBe(2);
 })
 
+it('should not delete anything', async () => {
+    const uuid = uuidv4();
+    const result = await strapiHandler.findOne(collectionName).filter('Str', FilterOperator.EQUAL_TO, uuid).chain().delete();
+    expect(result).toBeNull();
+})
 
+it('should update uuid to a new one', async () => {
+    const _uuid = uuidv4();
+    const result = await strapiHandler.findOne(collectionName).filter('Str', FilterOperator.EQUAL_TO, uuid).chain().put<Test>({
+        Str: _uuid
+    });
+    expect(result?.Str).toBe(_uuid);
+});
+
+it('should not exists', async () => {
+    const result = await strapiHandler.findOne(collectionName).filter('Str', FilterOperator.EQUAL_TO, uuid).chain().show('Str');
+    expect(result).toBeNull();
+});
+
+it('should not update anything', async () => {
+    const result = await strapiHandler.findOne(collectionName).filter('Str', FilterOperator.EQUAL_TO, uuid).chain().put<Test>({
+        Str: uuidv4()
+    });
+    expect(result).toBeNull();
+});
+
+it('should return only the uuid', async () => {
+    let result = await strapiHandler.findOne(collectionName).chain().show<Test>();
+    expect(result).not.toBeNull();
+    const uuid = result!.Str;
+    result = await strapiHandler.findOne(collectionName).chain().show('Str');
+    expect(result).toBe(uuid);
+});
+
+it('should return both the uuid and the n', async () => {
+    let result = await strapiHandler.findOne(collectionName).chain().show<Test>();
+    expect(result).not.toBeNull();
+    const uuid = result!.Str;
+    const n = result!.Num;
+    const results = await strapiHandler.findOne(collectionName).chain().show<Partial<Test> | null>(['Str','Num']);
+    expect(results).not.toBeNull();
+    console.log(results);
+    expect(results!['Str']).toBe(uuid)
+    expect(results!['Num']).toBe(n)
+});
+
+it('should return the Str as uuid', async () => {
+    const result = await strapiHandler.findOne(collectionName).rename('Str','uuid').chain().show<{uuid: string}>();
+    expect(result?.uuid).toBeDefined();
+});
+
+it('should return only the Str and the id', async () => {
+    const result = await strapiHandler.findOne(collectionName).field('Str').chain().show<Partial<Test>>();
+    expect(result?.Num).toBeUndefined();
+    expect(result?.RelationMany).toBeUndefined();
+    expect(result?.RelationMany).toBeUndefined();
+    expect(result?.Str).toBeDefined();
+    expect(result?.id).toBeDefined();
+});
+
+it('should return both the results', async () => {
+    let results = await strapiHandler.findAll(collectionName).call<Test>();
+    expect(results.data.length).toBeGreaterThan(1);
+    results.data = results.data.slice(0,2);
+    expect(results.data.length).toBe(2);
+    const uuid1 = results.data[0]!.Str;
+    const uuid2 = results.data[1]!.Str;
+    results = await strapiHandler.findAll(collectionName).or('Str', FilterOperator.EQUAL_TO, uuid1).or('Str', FilterOperator.EQUAL_TO, uuid2).call<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data.find(el => el.Str === uuid1)).toBeDefined();
+    expect(results.data.find(el => el.Str === uuid2)).toBeDefined();
+});
+
+it('should return the same element', async () => {
+    let result = await strapiHandler.findOne(collectionName).chain().show<Test>();
+    expect(result).toBeDefined();
+    const uuid = result!.Str;
+    const n = result!.Num;
+    result = await strapiHandler.findOne(collectionName).and('Str', FilterOperator.EQUAL_TO, uuid).and('Num', FilterOperator.EQUAL_TO, n).chain().show<Test>();
+    expect(result).toBeDefined();
+    expect(result?.Num).toBe(n);
+    expect(result?.Str).toBe(uuid);
+});
+
+it('should throw (chaining "and" and "or")', async () => {
+    let unsupportedOperation = () => strapiHandler.findOne(collectionName).and('Str', FilterOperator.EQUAL_TO, uuid).or('Num', FilterOperator.EQUAL_TO, n);
+    expect(unsupportedOperation).toThrow();
+    unsupportedOperation = () => strapiHandler.findOne(collectionName).or('Str', FilterOperator.EQUAL_TO, uuid).and('Num', FilterOperator.EQUAL_TO, n);
+    expect(unsupportedOperation).toThrow();
+});
