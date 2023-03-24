@@ -1,0 +1,19 @@
+{
+  "kind": "collectionType",
+  "collectionName": "relation_manies",
+  "info": {
+    "singularName": "relation-many",
+    "pluralName": "relation-manies",
+    "displayName": "RelationMany",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Str": {
+      "type": "string"
+    }
+  }
+}
