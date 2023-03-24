@@ -2,8 +2,8 @@ import axios from "axios";
 import { extractData } from "./StrapiHandler";
 
 class StrapiChain {
-    url: string = '';
-    data: any = '';
+    private url: string = '';
+    private data: any = '';
 
     constructor(strapiUrl: string, entries: string, private readonly apiKey: string, private readonly call: Promise<{data: any}>) {
         call.then((obj: any) => {

@@ -31,7 +31,7 @@ interface Test {
     Str: string,
     Num: number,
     RelationOne: any,
-    RelationMany: any[]
+    RelationMany: any[] | null
 }
 
 it('should create a new Test', async () => {
@@ -205,9 +205,74 @@ it('should return the same element', async () => {
     expect(result?.Str).toBe(uuid);
 });
 
-it('should throw (chaining "and" and "or")', async () => {
+it('should return an element', async () => {
+    let result = await strapiHandler.findOne(collectionName).chain().show<Test>();
+    expect(result).toBeDefined();
+    const uuid = uuidv4();
+    const id = result!.id;
+    result = await strapiHandler.findOne(collectionName).or('Str', FilterOperator.EQUAL_TO, uuid).or('Num', FilterOperator.EQUAL_TO, n).chain().show<Test>();
+    expect(result?.id).toBe(id);
+});
+
+it('should throw (not yet supported) (chaining "and" and "or")', async () => {
     let unsupportedOperation = () => strapiHandler.findOne(collectionName).and('Str', FilterOperator.EQUAL_TO, uuid).or('Num', FilterOperator.EQUAL_TO, n);
     expect(unsupportedOperation).toThrow();
     unsupportedOperation = () => strapiHandler.findOne(collectionName).or('Str', FilterOperator.EQUAL_TO, uuid).and('Num', FilterOperator.EQUAL_TO, n);
     expect(unsupportedOperation).toThrow();
+});
+
+it('should return two elements', async () => {
+    const all = await strapiHandler.findAll(collectionName).call<Test>();
+    for (let i = 0; i < all.data.length; i++) {
+        await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, all.data[i]!.id).chain().delete();
+    }
+    await strapiHandler.create(collectionName, {
+        Str: uuidv4(),
+        Num: 0
+    });
+    await strapiHandler.create(collectionName, {
+        Str: uuidv4(),
+        Num: 1
+    });
+    await strapiHandler.create(collectionName, {
+        Str: uuidv4(),
+        Num: 2
+    });
+    const results = await strapiHandler.findAll(collectionName).filter('Num', FilterOperator.IS_BETWEEN, 0,1).call<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data.find(el => el.Num === 0)).toBeDefined();
+    expect(results.data.find(el => el.Num === 1)).toBeDefined();
+});
+
+it('should return one elements', async () => {
+    const all = await strapiHandler.findAll(collectionName).call<Test>();
+    for (let i = 0; i < all.data.length; i++) {
+        await strapiHandler.findOne(collectionName).filter('id', FilterOperator.EQUAL_TO, all.data[i]!.id).chain().delete();
+    }
+    await strapiHandler.create(collectionName, <Test>{
+        Str: uuidv4(),
+        Num: 0,
+    });
+    await strapiHandler.create(collectionName, {
+        Str: uuidv4(),
+        Num: 5
+    });
+    await strapiHandler.create(collectionName, {
+        Str: uuidv4(),
+        Num: 6
+    });
+    const result = await strapiHandler.findOne(collectionName).filter('Num', FilterOperator.IS_BETWEEN, 0,1).chain().show<Test>();
+    expect(result).toBeDefined()
+    expect(result?.Num).toBe(0);
+});
+
+it('should hide id', async () => {
+    const result = await strapiHandler.findOne(collectionName).hideId().chain().show<Partial<Test>>();
+    expect(result).toBeDefined();
+    expect(result?.id).toBeUndefined();
+});
+
+it('should hide all (but id)', async () => {
+    const result = await strapiHandler.findOne(collectionName).showOnlyId().chain().show<number>();
+    expect(Number(result)).not.toBeNaN();
 });

@@ -7,13 +7,11 @@ class StrapiFindOne {
     private url: string;
     private fieldsCounter = 0;
     private filters = <(Filter)[]>[];
-    private isBracketOpen = false;
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
     private isIdHidden = false;
     private isAllHidden = false;
     private renamer = <{field: string, target: string}[]>[];
-    private shouldMatchOnlyOne = true;
 
     constructor(private readonly strapiUrl: string, private readonly entries: string, private readonly apiKey: string) {
         this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}?`;
@@ -32,6 +30,11 @@ class StrapiFindOne {
     public chain(): StrapiChain {
         const call = this.call();
         return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call);
+    }
+
+    public hideId() {
+        this.isIdHidden = true;
+        return this
     }
   
     public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
@@ -56,6 +59,11 @@ class StrapiFindOne {
         return this;
     }
 
+    public showOnlyId() {
+        this.isAllHidden = true;
+        return this;
+    }
+
     public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
         if (this.logicalOperator === LogicalOperator.OR) {
             throw new Error('Currently complex and or or combination are not supported');
@@ -77,9 +85,6 @@ class StrapiFindOne {
     private async call<T>(): Promise<{ data: T[], meta: any }> {
         this.offsetStart(0);
         this.offsetLimit(1);
-        if (this.isBracketOpen) {
-            throw new Error('Bracket opened and never closed');
-        }
         let isSetAnd = false;
         this.filters.forEach((el) => {
             if (el.andGroup !== 0)
@@ -120,7 +125,7 @@ class StrapiFindOne {
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}`
             }
         }, '');
-        let { data: { data, meta } } = await axios.get(this.url, {
+        let { data: { data } } = await axios.get(this.url, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`
             }
@@ -143,15 +148,7 @@ class StrapiFindOne {
             })
             return obj;
         })
-        if (!this.shouldMatchOnlyOne) {
-            return {
-                data: result,
-                meta
-            }
-        }
-        else {
-            return result[0];
-        }
+        return result[0];
     }
 }
 
