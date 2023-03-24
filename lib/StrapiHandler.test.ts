@@ -314,8 +314,14 @@ it('should return one elements', async () => {
 });
 
 it('should hide id', async () => {
-    const result = await strapiHandler.findOne(collectionName).hideId().chain().show<Partial<Test>>();
-    expect(result).toBeDefined();
+    await clearStrapi();
+    const uuid = uuidv4();
+    await strapiHandler.create(collectionName, <Test>{
+        Str: uuid
+    })
+
+    const result = await strapiHandler.findOne(collectionName).hideId().chain().show<Test>();
+    expect(result?.Str).toBe(uuid);
     expect(result?.id).toBeUndefined();
 });
 

@@ -29,7 +29,7 @@ class StrapiFindOne {
 
     public chain(): StrapiChain {
         const call = this.call();
-        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.isAllHidden ? 'id' : undefined);
+        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.isAllHidden ? 'id' : undefined, this.isIdHidden);
     }
 
     public hideId() {
@@ -137,9 +137,6 @@ class StrapiFindOne {
         });
         const result = extractData(data).map((el: any) => {
             const obj = {...el};
-            if (this.isIdHidden) {
-                delete obj.id;
-            }
             if (this.isAllHidden) {
                 Object.keys(el).forEach((key) => {
                     if (key !== 'id') {
