@@ -13,7 +13,7 @@ class StrapiHandler {
         return new StrapiFindOne(this.strapiUrl, entries, this.apiKey)
     }
 
-    public async create(collectionName: string, obj: any) {
+    public async create<T>(collectionName: string, obj: any): Promise<T> {
         const url = `${this.strapiUrl.endsWith('/') ? this.strapiUrl : this.strapiUrl + '/'}api/${collectionName}`;
         obj = {
             data: obj
@@ -23,7 +23,7 @@ class StrapiHandler {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         });
-        return extractData(data);
+        return extractData(data)[0];
     }
 }
 

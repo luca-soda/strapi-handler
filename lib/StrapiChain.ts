@@ -22,7 +22,7 @@ class StrapiChain {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         })
-        return extractData(data.data);
+        return extractData(data.data)[0];
     }
 
     public async put<T>(obj: any): Promise<T | null> {
@@ -39,7 +39,7 @@ class StrapiChain {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         });
-        return extractData(data.data);
+        return extractData(data.data)[0];
     }
 
     public async show<T>(keys?: string | string[]): Promise<T | null> {
