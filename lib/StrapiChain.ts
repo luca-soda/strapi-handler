@@ -12,10 +12,10 @@ class StrapiChain {
         })
     }
 
-    public async delete() {
+    public async delete<T>(): Promise<T | null> {
         await this.call;
         if (this.data?.id == null) {
-            return;
+            return null;
         }
         const { data } = await axios.delete(this.url, {
             headers: {
@@ -25,7 +25,7 @@ class StrapiChain {
         return extractData(data.data);
     }
 
-    public async put(obj: any) {
+    public async put<T>(obj: any): Promise<T | null> {
         await this.call;
         if (this.data?.id == null) {
             return null;     
@@ -42,7 +42,7 @@ class StrapiChain {
         return extractData(data.data);
     }
 
-    public async show(keys?: string | string[]) {
+    public async show<T>(keys?: string | string[]): Promise<T | null> {
         await this.call;
         if (this.data?.id == null) {
             return null;
