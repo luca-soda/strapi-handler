@@ -521,7 +521,6 @@ test('Filter tested for everything', async () => {
         },
         {
             Str: uuidv4(),
-            Str2: uuidv4(),
             Num: 2
         },
         {
@@ -531,51 +530,187 @@ test('Filter tested for everything', async () => {
         {
             Str: uuidv4(),
             Num: 5
-        }
+        },
+        {
+            Str2: 'DoubleData'
+        },
+        {
+            Str2: 'DoubleData'
+        },
     ];
     await strapi.createMany(tests, items);
 
-    let result2: Test | null;
+    let result: Test | null;
     // Basic filter
-    let result = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).show<Test>();
-    expect(result.data.length).toBe(2);
-    expect(result.data[0]!.Num).toBe(0);
-    expect(result.data[1]!.Num).toBe(0);
+    let results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).show<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[1]!.Num).toBe(0);
 
     // AND filter
-    result = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
-    expect(result.data.length).toBe(1);
-    expect(result.data[0]!.Num).toBe(0);
-    expect(result.data[0]!.Str).toBe(items[0]!.Str);
+    results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
+    expect(results.data.length).toBe(1);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[0]!.Str).toBe(items[0]!.Str);
 
     // OR filter
-    result = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
-    expect(result.data.length).toBe(2);
-    expect(result.data[0]!.Num).toBe(0);
-    expect(result.data[1]!.Num).toBe(0);
+    results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[1]!.Num).toBe(0);
 
     // All Filter Operator
-    result = await strapi.findAll(tests).filter('Str2', FilterOperator.CONTAINS, 'est').show<Test>();
-    result2 = await strapi.findOne(tests).filter('Str2', FilterOperator.CONTAINS, 'est').show<Test>();
-    expect(result.data.length).toBe(2);
-    expect(result.data[0]!.Str2).toBe('Test');
-    expect(result.data[1]!.Str2).toBe('Jest');
-    expect(result2).not.toBe(null);
-    expect(result2!.Str2).toBe('Test');
+    const checkWorkingOperator = async ({expectedResults, elementToCheck, valueToCheck, filterOperator, value, value2}: 
+                                        {expectedResults: number, elementToCheck: 'Str' | 'Str2' | 'Num', valueToCheck: any, filterOperator: FilterOperator, value: any, value2?: any}) => {
+        results = await strapi.findAll(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
+        result = await strapi.findOne(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
+        expect(results.data.length).toBe(expectedResults);
+        for (let i = 0; i < expectedResults; i++) {
+            expect((valueToCheck as []).find((el) => el === results.data[i]![elementToCheck])).not.toBeUndefined();
+        }
+        if (expectedResults > 0) {
+            expect(result).not.toBeNull();
+            expect((valueToCheck as []).find((el) => el === result![elementToCheck])).not.toBeUndefined();
+        }
+        else {
+            expect(result).toBeNull();
+        }
+    }
 
-    result = await strapi.findAll(tests).filter('Str2', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'EST').show<Test>();
-    result2 = await strapi.findOne(tests).filter('Str2', FilterOperator.CONTAINS_CASE_INSENSITIVE, 'EST').show<Test>();
-    expect(result.data.length).toBe(2);
-    expect(result.data[0]!.Str2).toBe('Test');
-    expect(result.data[1]!.Str2).toBe('Jest');
-    expect(result2).not.toBe(null);
-    expect(result2!.Str2).toBe('Test');
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.CONTAINS,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'est',
+        valueToCheck: ['Test', 'Jest']
+    });
 
-    result = await strapi.findAll(tests).filter('Str2', FilterOperator.IN, ['Test','Jest',uuidv4()]).show<Test>();
-    result2 = await strapi.findOne(tests).filter('Str2', FilterOperator.IN, ['Test','Jest',uuidv4()]).show<Test>();
-    expect(result.data.length).toBe(2);
-    expect(result.data[0]!.Str2).toBe('Test');
-    expect(result.data[1]!.Str2).toBe('Jest');
-    expect(result2).not.toBe(null);
-    expect(result2!.Str2).toBe('Test');
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.CONTAINS_CASE_INSENSITIVE,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'eSt',
+        valueToCheck: ['Test', 'Jest']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_BETWEEN,
+        elementToCheck: 'Num',
+        expectedResults: 4,
+        value: 0,
+        value2: 2,
+        valueToCheck: [0,1,2]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IN,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: ['DoubleData',uuidv4()],
+        valueToCheck: ['DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_EQUAL_TO_CASE_INSENSITIVE,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'doubledata',
+        valueToCheck: ['DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_GREATER_THAN,
+        elementToCheck: 'Num',
+        expectedResults: 2,
+        value: 1,
+        valueToCheck: [2, 5]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_GREATER_THAN_OR_EQUAL_TO,
+        elementToCheck: 'Num',
+        expectedResults: 2,
+        value: 2,
+        valueToCheck: [2, 5]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_LESS_THAN,
+        elementToCheck: 'Num',
+        expectedResults: 3,
+        value: 2,
+        valueToCheck: [0, 1]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_LESS_THAN_OR_EQUAL_TO,
+        elementToCheck: 'Num',
+        expectedResults: 4,
+        value: 2,
+        valueToCheck: [0, 1, 2]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_NOT_EQUAL_TO,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'DoubleData',
+        valueToCheck: ['Test', 'Jest']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_NOT_NULL,
+        elementToCheck: 'Str2',
+        expectedResults: 4,
+        value: null,
+        valueToCheck: ['Test', 'Jest', 'DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.IS_NULL,
+        elementToCheck: 'Str2',
+        expectedResults: 3,
+        value: null,
+        valueToCheck: [null]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.NOT_CONTAINS,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'est',
+        valueToCheck: ['DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.NOT_CONTAINS_CASE_INSENSITIVE,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'eSt',
+        valueToCheck: ['DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.NOT_IN,
+        elementToCheck: 'Num',
+        expectedResults: 2,
+        value: [1,2,5],
+        valueToCheck: [0]
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.STARTS_WITH,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'Doubl',
+        valueToCheck: ['DoubleData']
+    });
+
+    await checkWorkingOperator({
+        filterOperator: FilterOperator.STARTS_WITH_CASE_INSENSITIVE,
+        elementToCheck: 'Str2',
+        expectedResults: 2,
+        value: 'doubl',
+        valueToCheck: ['DoubleData']
+    });
 });

@@ -151,7 +151,13 @@ class StrapiFindAll {
             if (operator === FilterOperator.IS_BETWEEN) {
                 return acc + `&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
             }
-            else if (operator === FilterOperator.IN) {
+            else if (operator === FilterOperator.IS_NOT_NULL) {
+                return acc + `&filters${logicalOperator}[${field}][${operator}]=true`;
+            }
+            else if (operator === FilterOperator.IS_NULL) {
+                return acc + `&filters${logicalOperator}[${field}][${operator}]=true`;
+            }
+            else if (operator === FilterOperator.IN || operator === FilterOperator.NOT_IN) {
                 let inId = 0;
                 let filterStr = '';
                 for (let el of value) {
