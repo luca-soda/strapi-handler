@@ -2,7 +2,6 @@ import StrapiHandler = require('./StrapiHandler');
 import uuidLib = require('uuid');
 import axios from 'axios';
 import { FilterOperator, SortDirection } from './Interfaces';
-// import { FilterOperator, SortDirection } from './Interfaces';
 
 const uuidv4 = uuidLib.v4;
 const { IS_EQUAL_TO } = FilterOperator;
@@ -749,4 +748,15 @@ test('StrapiFindAll.and.or || StrapiFindAll.or.and', async () => {
     const orAnd = () => strapi.findAll(tests).or('Str', IS_EQUAL_TO, uuidv4()).and('Str', IS_EQUAL_TO, uuidv4());
     expect(andOr).toThrow();
     expect(orAnd).toThrow();
+});
+
+// Coverage tests
+test('Strapi.create when / is appended', async () => {
+    await deleteAll();
+
+    const shouldNotThrow = () => { new StrapiHandler.default(strapiUrl+'/',apiKey).create(tests, {
+        Num: 0
+    })};
+
+    expect(shouldNotThrow).not.toThrow();
 });

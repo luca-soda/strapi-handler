@@ -36,7 +36,12 @@ class StrapiHandler {
 }
 
 const isStrapiResponse = (data: any) => {
-    return (data[0]?.id && data[0]?.attributes) || (data.id && data.attributes);
+    if (typeof data === 'object' && data.length) {
+        return data[0].id && data[0].attributes;
+    }
+    else {
+        return data.id && data.attributes;
+    }
 }
 
 const extractData = (data: any) => {
