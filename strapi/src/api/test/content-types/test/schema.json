@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tests",
+  "info": {
+    "singularName": "test",
+    "pluralName": "tests",
+    "displayName": "Test",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Str": {
+      "type": "string"
+    },
+    "Num": {
+      "type": "integer"
+    },
+    "RelationOne": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::relation-one.relation-one"
+    },
+    "RelationMany": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::relation-many.relation-many"
+    },
+    "Str2": {
+      "type": "string"
+    }
+  }
+}

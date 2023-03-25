@@ -1,0 +1,19 @@
+{
+  "kind": "collectionType",
+  "collectionName": "relation_ones",
+  "info": {
+    "singularName": "relation-one",
+    "pluralName": "relation-ones",
+    "displayName": "RelationOne",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Str": {
+      "type": "string"
+    }
+  }
+}
