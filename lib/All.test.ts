@@ -39,6 +39,8 @@ it('should create valids StrapiHandler', async () => {
     expect(createHandler).not.toThrow();
     createHandler = async () => { await new StrapiHandler.default(strapiUrl + '/', apiKey).findOne(tests).show<Test>() };
     expect(createHandler).not.toThrow();
+    createHandler = async () => { await new StrapiHandler.default(strapiUrl + '/', apiKey).findAll(tests).show<Test>() };
+    expect(createHandler).not.toThrow();
 });
 
 const strapi = new StrapiHandler.default(strapiUrl, apiKey);
@@ -713,4 +715,38 @@ test('Filter tested for everything', async () => {
         value: 'doubl',
         valueToCheck: ['DoubleData']
     });
+});
+
+test('StrapiFindAll.hideId', async () => {
+    await deleteAll();
+    await createRandomItems(2);
+
+    const results = await strapi.findAll(tests).hideId().show<Test>();
+    expect(results.data.length).toBe(2);
+    results.data.forEach(el => {
+        expect(el.id).toBeUndefined();
+    }); 
+        
+}); 
+
+test('StrapiFindAll.rename', async () => {
+    await deleteAll();
+    await createRandomItems(2);
+
+    const results = await strapi.findAll(tests).rename('id','strapiId').show<{strapiId: number, id?: number}>();
+    expect(results.data.length).toBe(2);
+    results.data.forEach(el => {
+        expect(el.strapiId).not.toBeUndefined();
+        expect(el.id).toBeUndefined();
+    });
+});
+
+
+test('StrapiFindAll.and.or || StrapiFindAll.or.and', async () => {
+    await deleteAll();
+
+    const andOr = () => strapi.findAll(tests).and('Str', IS_EQUAL_TO, uuidv4()).or('Str', IS_EQUAL_TO, uuidv4());
+    const orAnd = () => strapi.findAll(tests).or('Str', IS_EQUAL_TO, uuidv4()).and('Str', IS_EQUAL_TO, uuidv4());
+    expect(andOr).toThrow();
+    expect(orAnd).toThrow();
 });

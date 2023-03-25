@@ -55,9 +55,6 @@ const extractData = (data: any) => {
                 if (r[key]?.data) {
                     r[key] = extractData(r[key].data);
                 }
-                if (r[key]?.data === null) {
-                    r[key] = []
-                }
             }
         }
         return result;
