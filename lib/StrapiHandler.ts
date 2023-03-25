@@ -13,17 +13,25 @@ class StrapiHandler {
         return new StrapiFindOne(this.strapiUrl, entries, this.apiKey)
     }
 
-    public async create<T>(collectionName: string, obj: any): Promise<T> {
+    public async create<T>(collectionName: string, obj: Partial<T>): Promise<T> {
         const url = `${this.strapiUrl.endsWith('/') ? this.strapiUrl : this.strapiUrl + '/'}api/${collectionName}`;
-        obj = {
+        let _obj = {
             data: obj
         };
-        let { data: { data } } = await axios.post(url, obj, {
+        let { data: { data } } = await axios.post(url, _obj, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`
             }
         });
         return extractData(data)[0];
+    }
+
+    public async createMany<T>(collectionName: string, objects: Partial<T>[]): Promise<T[]> {
+        const results: T[] = [];
+        for (let obj of objects) {
+            results.push(await this.create(collectionName, obj))
+        }
+        return results;
     }
 }
 

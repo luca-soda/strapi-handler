@@ -31,7 +31,7 @@ class StrapiFindAll {
     public sort(field: string, sortDirection?: SortDirection): StrapiFindAll {
         this.url += `&sort[${this.sortCounter++}]=${field}`;
         if (sortDirection != null) {
-            this.url += sortDirection === SortDirection.ASC ? ':asc' : 'desc';
+            this.url += sortDirection === SortDirection.ASC ? ':asc' : ':desc';
         }
         return this;
     }
@@ -73,17 +73,21 @@ class StrapiFindAll {
         return this;
     }
 
-    public hideId() {
+    public hideId(): StrapiFindAll {
         this.isIdHidden = true;
         return this
     }
 
-    public showOnlyId() {
+    public async showOnlyIds(): Promise<{ids: number[], meta: any}> {
         this.isAllHidden = true;
-        return this;
+        const result = await this.call<any>();
+        return {
+            ids: result.data.map(el => el.id),
+            meta: result.meta
+        }
     }
 
-    public rename(field: string, target: string) {
+    public rename(field: string, target: string): StrapiFindAll {
         this.renamer.push({ field, target });
         return this;
     }
@@ -106,7 +110,11 @@ class StrapiFindAll {
         return this.filter(field, operator, value, secondaryValue);
     }
 
-    public async call<T>(): Promise<{ data: T[], meta: any }> {
+    public async show<T>(): Promise<{data: T[], meta: any}> {
+        return this.call<T>();
+    }
+
+    private async call<T>(): Promise<{ data: T[], meta: any }> {
         let isSetAnd = false;
         this.filters.forEach((el) => {
             if (el.andGroup !== 0)
@@ -142,6 +150,14 @@ class StrapiFindAll {
             }
             if (operator === FilterOperator.IS_BETWEEN) {
                 return acc + `&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
+            }
+            else if (operator === FilterOperator.IN) {
+                let inId = 0;
+                let filterStr = '';
+                for (let el of value) {
+                    filterStr += `&filters${logicalOperator}[${field}][${operator}][${inId++}]=${el}`;
+                }
+                return acc + filterStr;
             }
             else {
                 return acc + `&filters${logicalOperator}[${field}][${operator}]=${value}`

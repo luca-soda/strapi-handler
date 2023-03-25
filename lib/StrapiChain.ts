@@ -5,7 +5,7 @@ class StrapiChain {
     private url: string = '';
     private data: any = '';
 
-    constructor(strapiUrl: string, entries: string, private readonly apiKey: string, private readonly call: Promise<{data: any}>, private readonly forceField?: string, private readonly shouldHideId?: boolean) {
+    constructor(strapiUrl: string, entries: string, private readonly apiKey: string, private readonly call: Promise<{data: any}>, private readonly shouldHideId: boolean, private readonly shouldHideEverything: boolean) {
         call.then((obj: any) => {
             this.data = obj;
             this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}/${obj?.id}`;
@@ -42,7 +42,7 @@ class StrapiChain {
         return extractData(data.data)[0];
     }
 
-    public async show<T>(keys?: string | string[]): Promise<T | null> {
+    public async show<T>(): Promise<T | null> {
         await this.call;
         if (this.data?.id == null) {
             return null;
@@ -50,26 +50,10 @@ class StrapiChain {
         if (this.shouldHideId) {
             delete this.data.id;
         }
-        if (this.forceField != null) {
-            keys = this.forceField;
+        if (this.shouldHideEverything) {
+            return this.data.id;
         }
-        if (keys != null) {
-            if (typeof keys === 'string') {
-                return this.data[keys];
-            }
-            else {
-                const obj: any = {};
-                Object.keys(this.data).forEach((key) => {
-                    if (keys!.includes(key)) {
-                        obj[key] = this.data[key];
-                    }
-                });
-                return obj;
-            }
-        }
-        else {
-            return extractData(this.data);
-        }
+        return this.data;
     }
 }
 

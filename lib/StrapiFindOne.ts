@@ -2,6 +2,7 @@ import { extractData } from "./StrapiHandler";
 import axios from 'axios';
 import { FilterOperator, LogicalOperator, Filter } from "./Interfaces";
 import StrapiChain from "./StrapiChain";
+import {v4 as uuidv4} from 'uuid';
 
 class StrapiFindOne {
     private url: string;
@@ -9,8 +10,8 @@ class StrapiFindOne {
     private filters = <(Filter)[]>[];
     private logicalOperator = LogicalOperator.NONE;
     private group = 0;
-    private isIdHidden = false;
-    private isAllHidden = false;
+    private shouldHideId = false;
+    private shouldHideEverything = false;
     private renamer = <{field: string, target: string}[]>[];
 
     constructor(private readonly strapiUrl: string, private readonly entries: string, private readonly apiKey: string) {
@@ -27,13 +28,13 @@ class StrapiFindOne {
         return this;
     }
 
-    public chain(): StrapiChain {
+    private chain(): StrapiChain {
         const call = this.call();
-        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.isAllHidden ? 'id' : undefined, this.isIdHidden);
+        return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.shouldHideId, this.shouldHideEverything);
     }
 
     public hideId() {
-        this.isIdHidden = true;
+        this.shouldHideId = true;
         return this
     }
   
@@ -64,9 +65,30 @@ class StrapiFindOne {
         return this;
     }
 
-    public getId(): Promise<number | null> {
-        this.isAllHidden = true;
+    public fields(fields: string[]): StrapiFindOne {
+        fields.forEach(field => this.field(field));
+        return this;
+    }
+
+    public generateUuid(): string {
+        return uuidv4();
+    }
+
+    public showOnlyId(): Promise<number | null> {
+        this.shouldHideEverything = true;
         return this.chain().show<number>();
+    }
+
+    public async show<T>(): Promise<T | null> {
+        return await this.chain().show<T>();
+    }
+
+    public async update<T>(obj: Partial<T>): Promise<T | null> {
+        return await this.chain().put(obj);
+    }
+
+    public async delete<T>(): Promise<T | null> {
+        return await this.chain().delete<T>();
     }
 
     public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
@@ -88,8 +110,16 @@ class StrapiFindOne {
     }
 
     private async call<T>(): Promise<{ data: T[], meta: any }> {
+        let uuid: string;
+
         this.offsetStart(0);
         this.offsetLimit(1);
+
+        if (this.shouldHideEverything) {
+            uuid = this.generateUuid();
+            this.field(uuid);
+        }
+
         let isSetAnd = false;
         this.filters.forEach((el) => {
             if (el.andGroup !== 0)
@@ -126,6 +156,14 @@ class StrapiFindOne {
             if (operator === FilterOperator.IS_BETWEEN) {
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
             }
+            else if (operator === FilterOperator.IN) {
+                let inId = 0;
+                let filterStr = '';
+                for (let el of value) {
+                    filterStr += `&filters${logicalOperator}[${field}][${operator}][${inId++}]=${el}`;
+                }
+                return acc + filterStr;
+            }
             else {
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}`
             }
@@ -137,12 +175,8 @@ class StrapiFindOne {
         });
         const result = extractData(data).map((el: any) => {
             const obj = {...el};
-            if (this.isAllHidden) {
-                Object.keys(el).forEach((key) => {
-                    if (key !== 'id') {
-                        delete obj[key];
-                    }
-                })
+            if (this.shouldHideEverything && obj[uuid] != null) {
+                delete obj[uuid];
             }
             this.renamer.forEach((rename) => {
                 obj[rename.target] = obj[rename.field];

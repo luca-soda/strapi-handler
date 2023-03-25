@@ -4,9 +4,9 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "test:prep": "cd strapi && yarn start",
+    "test:prep": "cd strapi && yarn develop",
     "dev": "ts-node index.ts",
-    "test": "jest lib/StrapiHandler.test.ts"
+    "test": "jest lib/All.test.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
