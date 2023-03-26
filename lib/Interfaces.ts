@@ -36,6 +36,6 @@ export interface Filter {
     value: any,
     secondaryValue: any
     operator: FilterOperator,
-    andGroup?: number,
-    orGroup?: number
+    andGroup?: number | undefined,
+    orGroup?: number | undefined
 }

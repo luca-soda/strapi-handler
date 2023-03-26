@@ -38,15 +38,27 @@ class StrapiFindOne {
         return this
     }
   
-    public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
-        this.filters.push({
-            field,
-            operator,
-            value,
-            secondaryValue,
-            andGroup: this.logicalOperator === LogicalOperator.AND ? this.group : 0,
-            orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
-        });
+    public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any, overrideAndOrGroup?: {and?: number, or?: number}): StrapiFindOne {
+        if (overrideAndOrGroup != null) {
+            this.filters.push({
+                field,
+                operator,
+                value,
+                secondaryValue,
+                andGroup: overrideAndOrGroup.and,
+                orGroup: overrideAndOrGroup.or
+            });
+        }
+        else {
+            this.filters.push({
+                field,
+                operator,
+                value,
+                secondaryValue,
+                andGroup: this.logicalOperator === LogicalOperator.AND ? this.group : 0,
+                orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
+            });
+        }
         return this;
     }
 
