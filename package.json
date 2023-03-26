@@ -6,7 +6,8 @@
   "scripts": {
     "test:prep": "cd strapi && yarn develop",
     "dev": "ts-node index.ts",
-    "test": "jest lib/All.test.ts"
+    "test": "jest lib/All.test.ts",
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
