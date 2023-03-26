@@ -1,5 +1,5 @@
 {
-  "name": "strapi-handler",
+  "name": "@sahareth/strapi-handler",
   "version": "1.0.0",
   "main": "index.ts",
   "license": "MIT",
@@ -24,5 +24,24 @@
     "axios": "^1.3.4",
     "chalk": "4.1.2",
     "uuid": "^9.0.0"
-  }
+  },
+  "description": "Strapi-Handler assists in managing queries to Strapi's REST API services by constructing the queries on behalf of the developer, streamlining the process.",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luca-soda/strapi-handler.git"
+  },
+  "keywords": [
+    "strapi",
+    "quey",
+    "helper",
+    "handler"
+  ],
+  "author": "Luca Soda",
+  "bugs": {
+    "url": "https://github.com/luca-soda/strapi-handler/issues"
+  },
+  "homepage": "https://github.com/luca-soda/strapi-handler#readme"
 }
