@@ -110,7 +110,8 @@ It has a series all methods, almost all of them* can be chained, here exhaustive
 | offsetStart | Set the pagination start | pagination[start]=value |
 | offsetLimit | Set the pagination limit | pagination[limit]=value |
 | hideId | Hide the id from the response object | No equivalent, new feature |
-| populate | Populate the first level of a relationship. Strapi does support a two-level deep populate, but that’s not implemented yet. | populate=field |
+| populate | Populate the first level of a relationship. | populate=field |
+| deepPopulate | Populate the second level of a relationship. | populate[field][populate][0]=field2 |
 | rename | Rename an field with another name. Acts after every other operator | No equivalent, new feature |
 | field | Specify which field to select. If there are more than once, chain this method multiple times or use “fields” | field[0]=value |
 | fields | Specify which fields to select. | field[0]=value&field[1]=value […] |
@@ -124,7 +125,7 @@ It has a series all methods, almost all of them* can be chained, here exhaustive
 | update | A chain terminator that update the object found | Equivalent of making the GET call, and a PUT with the id found |
 | delete | A chain terminator that delete the object found | Equivalent of making the GET call, and a DELETE with the id found |
 
-*And and Or can’t be chained ****************together**************** at the moment. You can chain multiple and or multiple or, but you can’t chain an “and” and an “or” together.
+*And and Or can’t be chained ****************together**************** at the moment. You must use filters and group of Strapi.
 
 ** Since there is not a way to return only an id in Strapi, it search for a random field and remove it from the selected list
 
@@ -152,6 +153,7 @@ You don’t need to know anything about StrapiFindAll beside its methods, that a
 | offsetLimit | Set the pagination limit | pagination[limit]=value |
 | hideId | Hide the id from the response object | No equivalent, new feature |
 | populate | Populate the first level of a relationship. Strapi does support a two-level deep populate, but that’s not implemented yet. | populate=field |
+| deepPopulate | Populate the second level of a relationship. | populate[field][populate][0]=field2 |
 | sort | Sort the request by a parameter | sort[counter]=field |
 | page | Set the page to request for the next request | pagination[page]=value |
 | pageSize | Set the pageSize of the next request | pagination[pageSize]=value |
@@ -164,7 +166,7 @@ You don’t need to know anything about StrapiFindAll beside its methods, that a
 | showOnlyIds | A chain terminator that returns only the ids. It’s optimised** to return only the id  | Equivalent of making the GET and parsing the object |
 | show | A chain terminator that returns the full object (or the filtered and renamed one) | Equivalent of making the GET call and parsing the object |
 
-*And and Or can’t be chained ****************together**************** at the moment. You can chain multiple and or multiple or, but you can’t chain an “and” and an “or” together.
+*And and Or can’t be chained ****************together**************** at the moment. You must use filters and group of Strapi.
 
 ** Since there is not a way to return only an id in Strapi, it search for a random field and remove it from the selected list
 
@@ -193,6 +195,23 @@ export enum FilterOperator {
     STARTS_WITH = '$startsWith',
     STARTS_WITH_CASE_INSENSITIVE = '$startsWithi',
 }
+```
+
+# Complex Filters
+The complex filters are... quite complex to be honest and they are not documented yet by Strapi. The strapi group has been implemented 1:1, you can find information on how to do complex query here: https://forum.strapi.io/t/advanced-api-filter-combining-and-and-or/24375
+Here is an example of a complex query
+```tsx
+await strapi.findAll(tests)
+                     .filter('Num', IS_EQUAL_TO, 0, { andGroup: 0, orGroup: 0 })
+                     .filter('Str2', IS_EQUAL_TO, 'Test', {andGroup: 1, orGroup: 0})
+                     .filter('Num', IS_EQUAL_TO, 5, { andGroup: 2, orGroup: 1})
+                     .filter('Str', FilterOperator.IS_NOT_EQUAL_TO, uuidv4(), { andGroup: 3, orGroup: 1})
+                     .show<Test>();
+```
+
+That example means - Search all values that have:
+```tsx
+(Num === 0 && Str2 === 'Test') || (Num === 5 && Str !== uuidv4())
 ```
 
 # Types and normalisation
