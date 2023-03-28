@@ -39,6 +39,9 @@ class StrapiFindOne {
     }
   
     public filter(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindOne {
+        if (optionalParams.secondaryValue == null && operator === FilterOperator.IS_BETWEEN) {
+            throw new Error('IS_BETWEEN without secondaryValue');
+        }        
         this.filters.push({
             field,
             operator,
@@ -154,9 +157,6 @@ class StrapiFindOne {
                 logicalOperator = `[$and][${andGroup}]`;
             }
             if (operator === FilterOperator.IS_BETWEEN) {
-                if (optionalParams.secondaryValue == null) {
-                    throw new Error('IS_BETWEEN without secondary value');
-                }
                 const { secondaryValue } = optionalParams;
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
             }

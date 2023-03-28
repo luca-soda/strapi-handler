@@ -772,25 +772,10 @@ test('STARTS_WITH_CASE_INSENSITIVE filter', async () => {
 });
 
 
-//Mega test
-test('Throwing IS_BETWEEN errors', async () => {
-    await prepareDataForFilter();
-
-    try {
-        await strapi.findOne(tests).filter('id', FilterOperator.IS_BETWEEN, 5).show();
-        fail('It should throw an error')
-    }
-    catch {
-    }
-
-    try {
-        await strapi.findAll(tests).filter('id', FilterOperator.IS_BETWEEN, 5).show();
-        fail('It should throw an error')
-    }
-    catch {
-
-    }
-
+it('should throw IS_BETWEEN errors', async () => {
+    await deleteAll();
+    expect(() => strapi.findOne(tests).filter('id', FilterOperator.IS_BETWEEN, 5)).toThrow();
+    expect(() => strapi.findAll(tests).filter('id', FilterOperator.IS_BETWEEN, 5)).toThrow();
 });
 
 test('StrapiFindAll.hideId', async () => {
