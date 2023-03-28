@@ -31,6 +31,12 @@ class StrapiFindOne {
         return this;
     }
 
+    private splitFields(field: string) {
+        return field.split('.').reduce((acc, value) => {
+            return `${acc}[${value}]`
+        },'')
+    }
+
     private chain(): StrapiChain {
         const call = this.call();
         return new StrapiChain(this.strapiUrl, this.entries, this.apiKey, call, this.shouldHideId, this.shouldHideEverything);
@@ -168,24 +174,24 @@ class StrapiFindOne {
             }
             if (operator === FilterOperator.IS_BETWEEN) {
                 const { secondaryValue } = optionalParams;
-                return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
+                return acc+`&filters${logicalOperator}${this.splitFields(field)}[${operator}]=${value}&filters${logicalOperator}${this.splitFields(field)}[${operator}]=${secondaryValue}`
             }
             else if (operator === FilterOperator.IS_NOT_NULL) {
-                return acc + `&filters${logicalOperator}[${field}][${operator}]=true`
+                return acc + `&filters${logicalOperator}${this.splitFields(field)}[${operator}]=true`
             }
             else if (operator === FilterOperator.IS_NULL) {
-                return acc + `&filters${logicalOperator}[${field}][${operator}]=true`;
+                return acc + `&filters${logicalOperator}${this.splitFields(field)}[${operator}]=true`;
             }
             else if (operator === FilterOperator.IN || operator === FilterOperator.NOT_IN) {
                 let inId = 0;
                 let filterStr = '';
                 for (let el of value) {
-                    filterStr += `&filters${logicalOperator}[${field}][${operator}][${inId++}]=${el}`;
+                    filterStr += `&filters${logicalOperator}${this.splitFields(field)}[${operator}][${inId++}]=${el}`;
                 }
                 return acc + filterStr;
             }
             else {
-                return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}`
+                return acc+`&filters${logicalOperator}${this.splitFields(field)}[${operator}]=${value}`
             }
         }, '');
         let { data: { data } } = await axios.get(this.url, {
