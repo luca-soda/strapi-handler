@@ -1,6 +1,6 @@
 import { extractData } from "./StrapiHandler";
 import axios from 'axios';
-import { FilterOperator, LogicalOperator, Filter } from "./Interfaces";
+import { FilterOperator, LogicalOperator, Filter, OptionalParams } from "./Interfaces";
 import StrapiChain from "./StrapiChain";
 import {v4 as uuidv4} from 'uuid';
 
@@ -38,12 +38,12 @@ class StrapiFindOne {
         return this
     }
   
-    public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
+    public filter(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindOne {
         this.filters.push({
             field,
             operator,
             value,
-            secondaryValue,
+            optionalParams,
             andGroup: this.logicalOperator === LogicalOperator.AND ? this.group : 0,
             orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
         });
@@ -91,22 +91,22 @@ class StrapiFindOne {
         return await this.chain().delete<T>();
     }
 
-    public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
+    public and(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindOne {
         if (this.logicalOperator === LogicalOperator.OR) {
             throw new Error('Currently complex and or or combination are not supported');
         }
         this.logicalOperator = LogicalOperator.AND;
         this.group = this.group+1;
-        return this.filter(field, operator, value, secondaryValue);
+        return this.filter(field, operator, value, optionalParams);
     }
 
-    public or(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindOne {
+    public or(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindOne {
         if (this.logicalOperator === LogicalOperator.AND) {
             throw new Error('Currently complex and or or combination are not supported');
         }
         this.logicalOperator = LogicalOperator.OR;
         this.group = this.group+1;
-        return this.filter(field, operator, value, secondaryValue);
+        return this.filter(field, operator, value, optionalParams);
     }
 
     private async call<T>(): Promise<{ data: T[], meta: any }> {
@@ -145,7 +145,7 @@ class StrapiFindOne {
             })
         }
         this.url += this.filters.reduce((acc: string, currentValue: Filter): string => {
-            const {field, operator, value, orGroup, andGroup, secondaryValue} = currentValue;
+            const {field, operator, value, orGroup, andGroup, optionalParams} = currentValue;
             let logicalOperator = ""
             if (orGroup != null) {
                 logicalOperator = `[$or][${orGroup}]`;
@@ -154,6 +154,10 @@ class StrapiFindOne {
                 logicalOperator = `[$and][${andGroup}]`;
             }
             if (operator === FilterOperator.IS_BETWEEN) {
+                if (optionalParams.secondaryValue == null) {
+                    throw new Error('IS_BETWEEN without secondary value');
+                }
+                const { secondaryValue } = optionalParams;
                 return acc+`&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
             }
             else if (operator === FilterOperator.IS_NOT_NULL) {

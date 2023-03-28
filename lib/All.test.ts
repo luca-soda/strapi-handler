@@ -400,7 +400,7 @@ test('StrapiFindOne.and.or || StrapiFindOne.or.and', async () => {
 test('StrapiFindOne.showOnlyId', async () => {
     await deleteAll();
     const findOne = strapi.findOne(tests);
-    jest.spyOn(findOne,'generateUuid').mockReturnValueOnce('Str');
+    jest.spyOn(findOne, 'generateUuid').mockReturnValueOnce('Str');
     const item = await createRandomItem();
 
     const result = await findOne.showOnlyId();
@@ -410,8 +410,8 @@ test('StrapiFindOne.showOnlyId', async () => {
 test('StrapiFindOne.fields', async () => {
     await deleteAll();
     await createRandomItem();
-    
-    const result = await strapi.findOne(tests).fields(['Str','Str2']).show<Test>();
+
+    const result = await strapi.findOne(tests).fields(['Str', 'Str2']).show<Test>();
     expect(result).not.toBeNull();
     expect(typeof result!.Str).toBe('string');
     expect(typeof result!.Str2).toBe('string');
@@ -422,7 +422,7 @@ test('StrapiFindOne.fields', async () => {
 
 test('StrapiFindAll.page', async () => {
     await deleteAll();
-    await createRandomItems(25+4);
+    await createRandomItems(25 + 4);
 
     const results = await strapi.findAll(tests).page(2).show();
     expect(results.data.length).toBe(4);
@@ -442,16 +442,16 @@ test('StrapiFindAll.sort', async () => {
         }
     ];
     await strapi.createMany(tests, items);
-    items.sort((a,b) => b.Num! - a.Num!);
+    items.sort((a, b) => b.Num! - a.Num!);
 
-    let results = await strapi.findAll(tests).sort('Num',SortDirection.DESC).show<Test>();
+    let results = await strapi.findAll(tests).sort('Num', SortDirection.DESC).show<Test>();
     expect(results.data.length).toBe(items.length);
     for (let i = 0; i < items.length; i++) {
         expect(items[i]!.Num!).toBe(results.data[i]!.Num);
     }
 
-    items.sort((a,b) => a.Num! - b.Num!);
-    results = await strapi.findAll(tests).sort('Num',SortDirection.ASC).show<Test>();
+    items.sort((a, b) => a.Num! - b.Num!);
+    results = await strapi.findAll(tests).sort('Num', SortDirection.ASC).show<Test>();
     expect(results.data.length).toBe(items.length);
     for (let i = 0; i < items.length; i++) {
         expect(items[i]!.Num!).toBe(results.data[i]!.Num);
@@ -462,7 +462,7 @@ test('StrapiFindAll.fields', async () => {
     await deleteAll();
     await createRandomItems(5);
 
-    const results = await strapi.findAll(tests).fields(['Str','Str2']).show<Test>();
+    const results = await strapi.findAll(tests).fields(['Str', 'Str2']).show<Test>();
     results.data.forEach((result) => {
         expect(typeof result.Str).toBe('string');
         expect(typeof result.Str2).toBe('string');
@@ -496,18 +496,17 @@ test('StrapiFindAll.offsetStart && Strapi.offsetLimit', async () => {
     ];
     await strapi.createMany<Test>(tests, items);
 
-    let results = await strapi.findAll(tests).sort('Num',SortDirection.ASC).offsetStart(1).show<Test>();
+    let results = await strapi.findAll(tests).sort('Num', SortDirection.ASC).offsetStart(1).show<Test>();
     expect(results.data.length).toBe(2);
     expect(results.data[0]!.Num).toBe(items[1]!.Num);
     expect(results.data[1]!.Num).toBe(items[2]!.Num);
 
-    results = await strapi.findAll(tests).sort('Num',SortDirection.ASC).offsetStart(1).offsetLimit(1).show<Test>();
+    results = await strapi.findAll(tests).sort('Num', SortDirection.ASC).offsetStart(1).offsetLimit(1).show<Test>();
     expect(results.data.length).toBe(1);
     expect(results.data[0]!.Num).toBe(items[1]!.Num);
 });
 
-//Mega test
-test('Filter tested for everything', async () => {
+const prepareDataForFilter = async () => {
     await deleteAll();
     const items: Partial<Test>[] = [
         {
@@ -540,44 +539,52 @@ test('Filter tested for everything', async () => {
         },
     ];
     await strapi.createMany(tests, items);
+    return items;
+}
 
-    let result: Test | null;
-    // Basic filter
-    let results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).show<Test>();
+const checkWorkingOperator = async ({ expectedResults, elementToCheck, valueToCheck, filterOperator, value, value2 }:
+    { expectedResults: number, elementToCheck: 'Str' | 'Str2' | 'Num', valueToCheck: any, filterOperator: FilterOperator, value: any, value2?: any }) => {
+    const results = await strapi.findAll(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
+    const result = await strapi.findOne(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
+    expect(results.data.length).toBe(expectedResults);
+    for (let i = 0; i < expectedResults; i++) {
+        expect((valueToCheck as []).find((el) => el === results.data[i]![elementToCheck])).not.toBeUndefined();
+    }
+    if (expectedResults > 0) {
+        expect(result).not.toBeNull();
+        expect((valueToCheck as []).find((el) => el === result![elementToCheck])).not.toBeUndefined();
+    }
+    else {
+        expect(result).toBeNull();
+    }
+}
+
+test('Basic filter', async () => {
+    await prepareDataForFilter();
+    const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).show<Test>();
     expect(results.data.length).toBe(2);
     expect(results.data[0]!.Num).toBe(0);
     expect(results.data[1]!.Num).toBe(0);
+});
 
-    // AND filter
-    results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
+test('AND filter', async () => {
+    const items = await prepareDataForFilter();
+    const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
     expect(results.data.length).toBe(1);
     expect(results.data[0]!.Num).toBe(0);
     expect(results.data[0]!.Str).toBe(items[0]!.Str);
+});
 
-    // OR filter
-    results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
+test('OR filter', async () => {
+    await prepareDataForFilter();
+    const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
     expect(results.data.length).toBe(2);
     expect(results.data[0]!.Num).toBe(0);
     expect(results.data[1]!.Num).toBe(0);
+})
 
-    // All Filter Operator
-    const checkWorkingOperator = async ({expectedResults, elementToCheck, valueToCheck, filterOperator, value, value2}: 
-                                        {expectedResults: number, elementToCheck: 'Str' | 'Str2' | 'Num', valueToCheck: any, filterOperator: FilterOperator, value: any, value2?: any}) => {
-        results = await strapi.findAll(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
-        result = await strapi.findOne(tests).filter(elementToCheck, filterOperator, value, value2).show<Test>();
-        expect(results.data.length).toBe(expectedResults);
-        for (let i = 0; i < expectedResults; i++) {
-            expect((valueToCheck as []).find((el) => el === results.data[i]![elementToCheck])).not.toBeUndefined();
-        }
-        if (expectedResults > 0) {
-            expect(result).not.toBeNull();
-            expect((valueToCheck as []).find((el) => el === result![elementToCheck])).not.toBeUndefined();
-        }
-        else {
-            expect(result).toBeNull();
-        }
-    }
-
+test('CONTAINS filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.CONTAINS,
         elementToCheck: 'Str2',
@@ -585,7 +592,10 @@ test('Filter tested for everything', async () => {
         value: 'est',
         valueToCheck: ['Test', 'Jest']
     });
+});
 
+test('CONTAINS_CASE_INSENSITIVE filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.CONTAINS_CASE_INSENSITIVE,
         elementToCheck: 'Str2',
@@ -593,24 +603,33 @@ test('Filter tested for everything', async () => {
         value: 'eSt',
         valueToCheck: ['Test', 'Jest']
     });
+});
 
+test('IS_BETWEEN filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_BETWEEN,
         elementToCheck: 'Num',
         expectedResults: 4,
         value: 0,
-        value2: 2,
-        valueToCheck: [0,1,2]
+        value2: { secondaryValue: 2 },
+        valueToCheck: [0, 1, 2]
     });
+});
 
+test('IN filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IN,
         elementToCheck: 'Str2',
         expectedResults: 2,
-        value: ['DoubleData',uuidv4()],
+        value: ['DoubleData', uuidv4()],
         valueToCheck: ['DoubleData']
     });
+});
 
+test('IS_EQUAL_CASE_INSENSITIVE filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_EQUAL_TO_CASE_INSENSITIVE,
         elementToCheck: 'Str2',
@@ -618,7 +637,10 @@ test('Filter tested for everything', async () => {
         value: 'doubledata',
         valueToCheck: ['DoubleData']
     });
+});
 
+test('IS_GREATER_THAN filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_GREATER_THAN,
         elementToCheck: 'Num',
@@ -626,7 +648,10 @@ test('Filter tested for everything', async () => {
         value: 1,
         valueToCheck: [2, 5]
     });
+});
 
+test('IS_GREATER_THAN_OR_EQUAL filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_GREATER_THAN_OR_EQUAL_TO,
         elementToCheck: 'Num',
@@ -634,7 +659,10 @@ test('Filter tested for everything', async () => {
         value: 2,
         valueToCheck: [2, 5]
     });
+});
 
+test('IS_LESS_THAN filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_LESS_THAN,
         elementToCheck: 'Num',
@@ -642,7 +670,10 @@ test('Filter tested for everything', async () => {
         value: 2,
         valueToCheck: [0, 1]
     });
+});
 
+test('IS_LESS_THAN_OR_EQUAL_TO filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_LESS_THAN_OR_EQUAL_TO,
         elementToCheck: 'Num',
@@ -650,7 +681,10 @@ test('Filter tested for everything', async () => {
         value: 2,
         valueToCheck: [0, 1, 2]
     });
+});
 
+test('IS_NOT_EQUAL_TO filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_NOT_EQUAL_TO,
         elementToCheck: 'Str2',
@@ -658,7 +692,10 @@ test('Filter tested for everything', async () => {
         value: 'DoubleData',
         valueToCheck: ['Test', 'Jest']
     });
+});
 
+test('IS_NOT_NULL filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_NOT_NULL,
         elementToCheck: 'Str2',
@@ -666,7 +703,10 @@ test('Filter tested for everything', async () => {
         value: null,
         valueToCheck: ['Test', 'Jest', 'DoubleData']
     });
+});
 
+test('IS_NULL filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.IS_NULL,
         elementToCheck: 'Str2',
@@ -674,7 +714,10 @@ test('Filter tested for everything', async () => {
         value: null,
         valueToCheck: [null]
     });
+});
 
+test('NOT_CONTAINS filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.NOT_CONTAINS,
         elementToCheck: 'Str2',
@@ -682,7 +725,10 @@ test('Filter tested for everything', async () => {
         value: 'est',
         valueToCheck: ['DoubleData']
     });
+});
 
+test('NOT_CONTAINS_CASE_INSENSITIVE filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.NOT_CONTAINS_CASE_INSENSITIVE,
         elementToCheck: 'Str2',
@@ -690,15 +736,21 @@ test('Filter tested for everything', async () => {
         value: 'eSt',
         valueToCheck: ['DoubleData']
     });
+});
 
+test('NOT_IN filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.NOT_IN,
         elementToCheck: 'Num',
         expectedResults: 2,
-        value: [1,2,5],
+        value: [1, 2, 5],
         valueToCheck: [0]
     });
+});
 
+test('STARTS_WITH filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.STARTS_WITH,
         elementToCheck: 'Str2',
@@ -706,7 +758,10 @@ test('Filter tested for everything', async () => {
         value: 'Doubl',
         valueToCheck: ['DoubleData']
     });
+});
 
+test('STARTS_WITH_CASE_INSENSITIVE filter', async () => {
+    await prepareDataForFilter();
     await checkWorkingOperator({
         filterOperator: FilterOperator.STARTS_WITH_CASE_INSENSITIVE,
         elementToCheck: 'Str2',
@@ -714,6 +769,28 @@ test('Filter tested for everything', async () => {
         value: 'doubl',
         valueToCheck: ['DoubleData']
     });
+});
+
+
+//Mega test
+test('Throwing IS_BETWEEN errors', async () => {
+    await prepareDataForFilter();
+
+    try {
+        await strapi.findOne(tests).filter('id', FilterOperator.IS_BETWEEN, 5).show();
+        fail('It should throw an error')
+    }
+    catch {
+    }
+
+    try {
+        await strapi.findAll(tests).filter('id', FilterOperator.IS_BETWEEN, 5).show();
+        fail('It should throw an error')
+    }
+    catch {
+
+    }
+
 });
 
 test('StrapiFindAll.hideId', async () => {
@@ -724,15 +801,15 @@ test('StrapiFindAll.hideId', async () => {
     expect(results.data.length).toBe(2);
     results.data.forEach(el => {
         expect(el.id).toBeUndefined();
-    }); 
-        
-}); 
+    });
+
+});
 
 test('StrapiFindAll.rename', async () => {
     await deleteAll();
     await createRandomItems(2);
 
-    const results = await strapi.findAll(tests).rename('id','strapiId').show<{strapiId: number, id?: number}>();
+    const results = await strapi.findAll(tests).rename('id', 'strapiId').show<{ strapiId: number, id?: number }>();
     expect(results.data.length).toBe(2);
     results.data.forEach(el => {
         expect(el.strapiId).not.toBeUndefined();
@@ -754,9 +831,11 @@ test('StrapiFindAll.and.or || StrapiFindAll.or.and', async () => {
 test('Strapi.create when / is appended', async () => {
     await deleteAll();
 
-    const shouldNotThrow = () => { new StrapiHandler.default(strapiUrl+'/',apiKey).create(tests, {
-        Num: 0
-    })};
+    const shouldNotThrow = () => {
+        new StrapiHandler.default(strapiUrl + '/', apiKey).create(tests, {
+            Num: 0
+        })
+    };
 
     expect(shouldNotThrow).not.toThrow();
 });

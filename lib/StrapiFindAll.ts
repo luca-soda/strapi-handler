@@ -1,6 +1,6 @@
 import { extractData } from "./StrapiHandler";
 import axios from 'axios';
-import { FilterOperator, LogicalOperator, Filter, SortDirection } from "./Interfaces";
+import { FilterOperator, LogicalOperator, Filter, SortDirection, OptionalParams } from "./Interfaces";
 
 
 class StrapiFindAll {
@@ -61,12 +61,12 @@ class StrapiFindAll {
         return this;
     }
 
-    public filter(field: string, operator: FilterOperator, value: any, secondaryValue?: any) {
+    public filter(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}) {
         this.filters.push({
             field,
             operator,
             value,
-            secondaryValue,
+            optionalParams,
             andGroup: this.logicalOperator === LogicalOperator.AND ? this.group : 0,
             orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
         });
@@ -140,7 +140,7 @@ class StrapiFindAll {
             })
         }
         this.url += this.filters.reduce((acc: string, currentValue: Filter): string => {
-            const { field, operator, value, orGroup, andGroup, secondaryValue } = currentValue;
+            const { field, operator, value, orGroup, andGroup, optionalParams } = currentValue;
             let logicalOperator = ""
             if (orGroup != null) {
                 logicalOperator = `[$or][${orGroup}]`;
@@ -149,6 +149,10 @@ class StrapiFindAll {
                 logicalOperator = `[$and][${andGroup}]`;
             }
             if (operator === FilterOperator.IS_BETWEEN) {
+                if (optionalParams.secondaryValue == null) {
+                    throw new Error('IS_BETWEEN without secondaryValue');
+                }
+                const { secondaryValue } = optionalParams
                 return acc + `&filters${logicalOperator}[${field}][${operator}]=${value}&filters${logicalOperator}[${field}][${operator}]=${secondaryValue}`
             }
             else if (operator === FilterOperator.IS_NOT_NULL) {
