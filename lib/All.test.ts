@@ -26,6 +26,12 @@ interface Relation {
     Str: string
 }
 
+interface RelationOne {
+    id: number,
+    Str: string,
+    DeepRelation: number
+}
+
 it('should create valids StrapiHandler', async () => {
     let createHandler: any;
     createHandler = () => { new StrapiHandler.default(strapiUrl, apiKey); }
@@ -305,6 +311,97 @@ test('StrapiFindOne.populate', async () => {
     resultWithBothRelations!.RelationMany!.forEach((relation: Relation) => {
         expect(itemRelationManies.find(r => r.id === relation.id)).not.toBeUndefined();
     });
+});
+
+test('StrapiFindOne.deepPopulate', async () => {
+    await deleteAll();
+    await createRandomItem();
+    const itemRelationMany = await strapi.create<Relation>(relationMany, {
+        Str: uuidv4()
+    });
+    const itemRelationOne = await strapi.create<RelationOne>(relationOne, {
+        Str: uuidv4(),
+        DeepRelation: itemRelationMany.id
+    });
+    await strapi.findOne(tests).update<Test>({
+        RelationOne: itemRelationOne.id,
+    });
+
+    const result = await strapi.findOne(tests).deepPopulate('RelationOne','DeepRelation').show<Test>();
+    expect(result).not.toBeNull();
+    expect(result!.RelationOne.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation[0]!.Str).toBe(itemRelationMany.Str);
+});
+
+test('StrapiFindOne.deepPopulate with *', async () => {
+    await deleteAll();
+    await createRandomItem();
+    const itemRelationMany = await strapi.create<Relation>(relationMany, {
+        Str: uuidv4()
+    });
+    const itemRelationOne = await strapi.create<RelationOne>(relationOne, {
+        Str: uuidv4(),
+        DeepRelation: itemRelationMany.id
+    });
+    await strapi.findOne(tests).update<Test>({
+        RelationOne: itemRelationOne.id,
+    });
+
+    const result = await strapi.findOne(tests).deepPopulate('RelationOne','*').show<Test>();
+    expect(result).not.toBeNull();
+    expect(result!.RelationOne.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation[0]!.Str).toBe(itemRelationMany.Str);
+});
+
+test('StrapiFindAll.deepPopulate', async () => {
+    await deleteAll();
+    await createRandomItem();
+    const itemRelationMany = await strapi.create<Relation>(relationMany, {
+        Str: uuidv4()
+    });
+    const itemRelationOne = await strapi.create<RelationOne>(relationOne, {
+        Str: uuidv4(),
+        DeepRelation: itemRelationMany.id
+    });
+    await strapi.findOne(tests).update<Test>({
+        RelationOne: itemRelationOne.id,
+    });
+
+    const results = await strapi.findAll(tests).deepPopulate('RelationOne','DeepRelation').show<Test>();
+    expect(results.data.length).toBe(1);
+    const result = results.data[0];
+    expect(result!.RelationOne.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation[0]!.Str).toBe(itemRelationMany.Str);
+});
+
+test('StrapiFindAll.deepPopulate with *', async () => {
+    await deleteAll();
+    await createRandomItem();
+    const itemRelationMany = await strapi.create<Relation>(relationMany, {
+        Str: uuidv4()
+    });
+    const itemRelationOne = await strapi.create<RelationOne>(relationOne, {
+        Str: uuidv4(),
+        DeepRelation: itemRelationMany.id
+    });
+    await strapi.findOne(tests).update<Test>({
+        RelationOne: itemRelationOne.id,
+    });
+
+    const results = await strapi.findAll(tests).deepPopulate('RelationOne','*').show<Test>();
+    expect(results.data.length).toBe(1);
+    const result = results.data[0];
+    expect(result!.RelationOne.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation.length).toBe(1);
+    expect(result!.RelationOne[0]!.DeepRelation[0]!.Str).toBe(itemRelationMany.Str);
+});
+
+it('should throw an error', async () => {
+    expect(() => strapi.findAll(tests).deepPopulate('*','DeepRelation')).toThrow();
+    expect(() => strapi.findOne(tests).deepPopulate('*','DeepRelation')).toThrow();
 });
 
 test('StrapiFindAll.populate', async () => {

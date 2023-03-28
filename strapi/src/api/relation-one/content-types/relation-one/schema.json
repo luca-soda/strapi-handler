@@ -14,6 +14,11 @@
   "attributes": {
     "Str": {
       "type": "string"
+    },
+    "DeepRelation": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::relation-many.relation-many"
     }
   }
 }
