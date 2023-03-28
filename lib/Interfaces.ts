@@ -34,12 +34,12 @@ export enum SortDirection {
 export interface Filter {
     field: string,
     value: any,
-    optionalParams: any
+    optionalParams: OptionalParams
     operator: FilterOperator,
-    andGroup?: number,
-    orGroup?: number
 }
 
 export interface OptionalParams {
     secondaryValue?: any;
+    andGroup?: number,
+    orGroup?: number
 }

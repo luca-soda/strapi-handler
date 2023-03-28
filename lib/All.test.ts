@@ -379,15 +379,6 @@ test('StrapiFindOne.and', async () => {
     expect(result!.id).toBe(item.id);
 });
 
-test('StrapiFindOne.or', async () => {
-    await deleteAll();
-    const item = await createRandomItem();
-
-    const result = await strapi.findOne(tests).filter('Str', IS_EQUAL_TO, uuidv4()).or('Str2', IS_EQUAL_TO, item.Str2).show<Test>();
-    expect(result).not.toBeNull();
-    expect(result!.id).toBe(item.id);
-});
-
 test('StrapiFindOne.and.or || StrapiFindOne.or.and', async () => {
     await deleteAll();
 
@@ -559,6 +550,21 @@ const checkWorkingOperator = async ({ expectedResults, elementToCheck, valueToCh
     }
 }
 
+test('Complex Query', async () => {
+    const items = await prepareDataForFilter();
+    const results = await strapi.findAll(tests)
+                                    .filter('Num', IS_EQUAL_TO, 0, { andGroup: 0, orGroup: 0 })
+                                    .filter('Str2', IS_EQUAL_TO, 'Test', {andGroup: 1, orGroup: 0})
+                                    .filter('Num', IS_EQUAL_TO, 5, { andGroup: 2, orGroup: 1})
+                                    .filter('Str', FilterOperator.IS_NOT_EQUAL_TO, uuidv4(), { andGroup: 3, orGroup: 1})
+                                    .show<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[0]!.Str2).toBe('Test');
+    expect(results.data[1]!.Num).toBe(5);
+    expect(results.data[1]!.Str).toBe(items[4]!.Str);
+});
+
 test('Basic filter', async () => {
     await prepareDataForFilter();
     const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).show<Test>();
@@ -570,18 +576,48 @@ test('Basic filter', async () => {
 test('AND filter', async () => {
     const items = await prepareDataForFilter();
     const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
+    const result = await strapi.findOne(tests).filter('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
     expect(results.data.length).toBe(1);
     expect(results.data[0]!.Num).toBe(0);
     expect(results.data[0]!.Str).toBe(items[0]!.Str);
+    expect(result).not.toBeNull();
+    expect(result!.Num).toBe(0);
+    expect(result!.Str).toBe(items[0]!.Str);
+});
+
+test('chained AND since the start', async () => {
+    const items = await prepareDataForFilter();
+    const results = await strapi.findAll(tests).and('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
+    const result = await strapi.findOne(tests).and('Num', IS_EQUAL_TO, 0).and('Str', IS_EQUAL_TO, items[0]!.Str).show<Test>();
+    expect(results.data.length).toBe(1);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[0]!.Str).toBe(items[0]!.Str);
+    expect(result).not.toBeNull();
+    expect(result!.Num).toBe(0);
+    expect(result!.Str).toBe(items[0]!.Str);
 });
 
 test('OR filter', async () => {
     await prepareDataForFilter();
     const results = await strapi.findAll(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
+    const result = await strapi.findOne(tests).filter('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
     expect(results.data.length).toBe(2);
     expect(results.data[0]!.Num).toBe(0);
     expect(results.data[1]!.Num).toBe(0);
+    expect(result).not.toBeNull();
+    expect(result!.Num).toBe(0);
 })
+
+test('Chained OR since the start', async () => {
+    await prepareDataForFilter();
+    const results = await strapi.findAll(tests).or('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
+    const result = await strapi.findOne(tests).or('Num', IS_EQUAL_TO, 0).or('Str', IS_EQUAL_TO, uuidv4()).show<Test>();
+    expect(results.data.length).toBe(2);
+    expect(results.data[0]!.Num).toBe(0);
+    expect(results.data[1]!.Num).toBe(0);
+    expect(result).not.toBeNull();
+    expect(result!.Num).toBe(0);
+});
 
 test('CONTAINS filter', async () => {
     await prepareDataForFilter();

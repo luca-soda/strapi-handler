@@ -9,10 +9,12 @@ class StrapiFindAll {
     private fieldsCounter = 0;
     private filters = <(Filter)[]>[];
     private logicalOperator = LogicalOperator.NONE;
-    private group = 0;
+    private andGroup: number | undefined;
+    private orGroup: number | undefined;
     private isIdHidden = false;
     private isAllHidden = false;
     private renamer = <{ field: string, target: string }[]>[];
+    private lastFilterPushed: Filter | undefined;
 
     constructor(strapiUrl: string, entries: string, private readonly apiKey: string) {
         this.url = `${strapiUrl.endsWith('/') ? strapiUrl : strapiUrl + '/'}api/${entries}?`;
@@ -69,10 +71,11 @@ class StrapiFindAll {
             field,
             operator,
             value,
-            optionalParams,
-            andGroup: this.logicalOperator === LogicalOperator.AND ? this.group : 0,
-            orGroup: this.logicalOperator === LogicalOperator.OR ? this.group : 0,
+            optionalParams
         });
+        if (this.logicalOperator === LogicalOperator.NONE) {
+            this.lastFilterPushed = this.filters[this.filters.length-1];
+        }
         return this;
     }
 
@@ -95,22 +98,32 @@ class StrapiFindAll {
         return this;
     }
 
-    public and(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindAll {
+    public and(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindAll {
         if (this.logicalOperator === LogicalOperator.OR) {
-            throw new Error('Currently complex and or or combination are not supported');
+            throw new Error('Use filter group override to setup chain of .and and .or');
+        }
+        if (this.logicalOperator === LogicalOperator.NONE && this.lastFilterPushed != null) {
+            this.andGroup = 0;
+            this.lastFilterPushed.optionalParams.andGroup = this.andGroup;
         }
         this.logicalOperator = LogicalOperator.AND;
-        this.group = this.group + 1;
-        return this.filter(field, operator, value, secondaryValue);
+        this.andGroup = this.andGroup != null ? this.andGroup + 1 : 0;
+        optionalParams.andGroup = this.andGroup;
+        return this.filter(field, operator, value, optionalParams);
     }
 
-    public or(field: string, operator: FilterOperator, value: any, secondaryValue?: any): StrapiFindAll {
+    public or(field: string, operator: FilterOperator, value: any, optionalParams: OptionalParams = {}): StrapiFindAll {
         if (this.logicalOperator === LogicalOperator.AND) {
-            throw new Error('Currently complex and or or combination are not supported');
+            throw new Error('Use filter group override to setup chain of .and and .or');
+        }
+        if (this.logicalOperator === LogicalOperator.NONE && this.lastFilterPushed != null) {
+            this.orGroup = 0;
+            this.lastFilterPushed.optionalParams.orGroup = this.orGroup;
         }
         this.logicalOperator = LogicalOperator.OR;
-        this.group = this.group + 1;
-        return this.filter(field, operator, value, secondaryValue);
+        this.orGroup = this.orGroup != null ? this.orGroup + 1 : 0;
+        optionalParams.orGroup = this.orGroup;
+        return this.filter(field, operator, value, optionalParams);
     }
 
     public async show<T>(): Promise<{data: T[], meta: any}> {
@@ -118,38 +131,14 @@ class StrapiFindAll {
     }
 
     private async call<T>(): Promise<{ data: T[], meta: any }> {
-        let isSetAnd = false;
-        this.filters.forEach((el) => {
-            if (el.andGroup !== 0)
-                isSetAnd = true;
-        });
-        if (!isSetAnd) {
-            this.filters = this.filters.map((el) => {
-                const obj = { ...el };
-                delete obj.andGroup;
-                return obj;
-            });
-        }
-        let isSetOr = false;
-        this.filters.forEach((el) => {
-            if (el.orGroup !== 0)
-                isSetOr = true;
-        });
-        if (!isSetOr) {
-            this.filters = this.filters.map((el) => {
-                const obj = { ...el };
-                delete obj.orGroup;
-                return obj;
-            })
-        }
         this.url += this.filters.reduce((acc: string, currentValue: Filter): string => {
-            const { field, operator, value, orGroup, andGroup, optionalParams } = currentValue;
+            const { field, operator, value, optionalParams } = currentValue;
             let logicalOperator = ""
-            if (orGroup != null) {
-                logicalOperator = `[$or][${orGroup}]`;
+            if (optionalParams.orGroup != null) {
+                logicalOperator += `[$or][${optionalParams.orGroup}]`;
             }
-            if (andGroup != null) {
-                logicalOperator = `[$and][${andGroup}]`;
+            if (optionalParams.andGroup != null) {
+                logicalOperator += `[$and][${optionalParams.andGroup}]`;
             }
             if (operator === FilterOperator.IS_BETWEEN) {
                 const { secondaryValue } = optionalParams
