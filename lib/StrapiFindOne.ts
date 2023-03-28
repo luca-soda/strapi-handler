@@ -7,6 +7,7 @@ import {v4 as uuidv4} from 'uuid';
 class StrapiFindOne {
     private url: string;
     private fieldsCounter = 0;
+    private populateCounter = 0;
     private filters = <(Filter)[]>[];
     private logicalOperator = LogicalOperator.NONE;
     private andGroup: number | undefined;
@@ -57,7 +58,12 @@ class StrapiFindOne {
     }
 
     public populate(field: string): StrapiFindOne {
-        this.url += `&populate=${field}`;
+        if (field === '*') {
+            this.url += `&populate=${field}`;
+        }
+        else {
+            this.url += `&populate[${this.populateCounter++}]=${field}`;
+        }
         return this;
     }
 

@@ -7,6 +7,7 @@ class StrapiFindAll {
     private url: string;
     private sortCounter = 0;
     private fieldsCounter = 0;
+    private populateCounter = 0;
     private filters = <(Filter)[]>[];
     private logicalOperator = LogicalOperator.NONE;
     private andGroup: number | undefined;
@@ -26,7 +27,12 @@ class StrapiFindAll {
     }
 
     public populate(field: string): StrapiFindAll {
-        this.url += `&populate=${field}`;
+        if (field === '*') {
+            this.url += `&populate=${field}`;
+        }
+        else {
+            this.url += `&populate[${this.populateCounter++}]=${field}`;
+        }
         return this;
     }
 
