@@ -36,6 +36,21 @@ class StrapiFindAll {
         return this;
     }
 
+    public deepPopulate(field: string, subfield: string): StrapiFindAll {
+        if (field === '*') {
+            throw new Error('The first field cannot be *');
+        }
+        else {
+            if (subfield === '*') {
+                this.url += `&populate[${field}][populate]=${subfield}`;
+            }
+            else {
+                this.url += `&populate[${field}][populate][${this.populateCounter++}]=${subfield}`;
+            }
+        }
+        return this;
+    }
+
     public sort(field: string, sortDirection?: SortDirection): StrapiFindAll {
         this.url += `&sort[${this.sortCounter++}]=${field}`;
         if (sortDirection != null) {

@@ -67,6 +67,21 @@ class StrapiFindOne {
         return this;
     }
 
+    public deepPopulate(field: string, subfield: string): StrapiFindOne {
+        if (field === '*') {
+            throw new Error('The first field cannot be *');
+        }
+        else {
+            if (subfield === '*') {
+                this.url += `&populate[${field}][populate]=${subfield}`;
+            }
+            else {
+                this.url += `&populate[${field}][populate][${this.populateCounter++}]=${subfield}`;
+            }
+        }
+        return this;
+    }
+
     public rename(field: string, target: string) {
         this.renamer.push({field, target});
         return this;
