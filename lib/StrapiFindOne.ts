@@ -74,16 +74,11 @@ class StrapiFindOne {
     }
 
     public deepPopulate(field: string, subfield: string): StrapiFindOne {
-        if (field === '*') {
-            throw new Error('The first field cannot be *');
+        if (field === '*' || subfield === '*') {
+            throw new Error('The fields cannot be *');
         }
         else {
-            if (subfield === '*') {
-                this.url += `&populate[${field}][populate]=${subfield}`;
-            }
-            else {
-                this.url += `&populate[${field}][populate][${this.populateCounter++}]=${subfield}`;
-            }
+            this.url += `&populate[${this.populateCounter++}]=${field}.${subfield}`;
         }
         return this;
     }
