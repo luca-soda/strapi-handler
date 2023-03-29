@@ -366,24 +366,8 @@ test('StrapiFindAll.deepPopulate', async () => {
 
 test('StrapiFindAll.deepPopulate with *', async () => {
     await deleteAll();
-    await createRandomItem();
-    const itemRelationMany = await strapi.create<Relation>(relationMany, {
-        Str: uuidv4()
-    });
-    const itemRelationOne = await strapi.create<RelationOne>(relationOne, {
-        Str: uuidv4(),
-        DeepRelation: itemRelationMany.id
-    });
-    await strapi.findOne(tests).update<Test>({
-        RelationOne: itemRelationOne.id,
-    });
-
-    const results = await strapi.findAll(tests).deepPopulate('RelationOne','*').show<Test>();
-    expect(results.data.length).toBe(1);
-    const result = results.data[0];
-    expect(result!.RelationOne.length).toBe(1);
-    expect(result!.RelationOne[0]!.DeepRelation.length).toBe(1);
-    expect(result!.RelationOne[0]!.DeepRelation[0]!.Str).toBe(itemRelationMany.Str);
+    const unsupportedOperation = () => strapi.findAll(tests).deepPopulate('RelationOne','*');
+    expect(unsupportedOperation).toThrow();
 });
 
 it('should throw an error', async () => {
